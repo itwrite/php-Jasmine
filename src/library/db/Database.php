@@ -1,0 +1,524 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: itwri
+ * Date: 2019/4/2
+ * Time: 12:47
+ */
+
+namespace Jasmine\library\db;
+
+
+use Jasmine\library\db\connection\capsule\Link;
+use Jasmine\library\db\connection\Connection;
+use Jasmine\library\db\interfaces\DatabaseInterface;
+use Jasmine\library\db\query\capsule\Expression;
+use Jasmine\library\exception\ErrorException;
+
+require_once 'Builder.php';
+require_once 'connection/capsule/Link.php';
+require_once 'connection/Connection.php';
+require_once 'interfaces/DatabaseInterface.php';
+require_once("query/capsule/Expression.php");
+
+class Database extends Builder implements DatabaseInterface
+{
+    protected $debug = false;
+    /**
+     * @var Connection|null
+     */
+    protected $Connection = null;
+
+    /**
+     * @var string
+     */
+    protected $linkName = null;
+
+    /**
+     * @var bool
+     */
+    private $_sticky = false;
+
+    protected $errorArr = [];
+
+    function __construct(array $config)
+    {
+        parent::__construct();
+
+        $this->tablePrefix = isset($config['table_prefix'])?$config['table_prefix']:'';
+        $this->Connection = new Connection($config);
+    }
+
+    /**
+     * @param bool $debug
+     * @return $this
+     */
+    public function debug($debug = false)
+    {
+        $this->debug = $debug == true;
+        return $this;
+    }
+
+    /**
+     * @param $sticky
+     * @return $this
+     * itwri 2019/12/19 14:33
+     */
+    public function sticky($sticky){
+        $this->_sticky = $sticky == true;
+        return $this;
+    }
+
+    /**
+     * @param $name
+     * @return $this
+     */
+    public function link($name){
+        $this->linkName = $name;
+        return $this;
+    }
+
+    /**
+     * @param null $name
+     * @return Link|mixed|null
+     * @throws \Exception
+     * itwri 2019/12/19 14:18
+     */
+    protected function getLink($name = null)
+    {
+        /**
+         * 如果为真，使用主连接
+         */
+        if ($this->_sticky == true) {
+            return $this->Connection->getMasterLink();
+        }
+
+        if(!is_null($name)){
+            return $this->Connection->getLink($name);
+        }
+
+        return $this->Connection->getLink($this->linkName);
+    }
+
+    /**
+     * @param array $data
+     * @param bool $is_replace
+     * @return int
+     * @throws \Exception
+     * itwri 2019/12/19 13:59
+     */
+    public function insert(Array $data = [], $is_replace = false)
+    {
+        $Link = $this->getLink(true);
+        //set data
+        $this->set($data);
+        //get the insert sql
+        $SQL = $this->toInsertSql($Link->getGrammar(), $is_replace);
+
+        //execute the sql
+        $this->exec($SQL);
+        //get the inserted Id
+        $lastInsertId = $Link->getPdo()->lastInsertId();
+
+        return intval($lastInsertId);
+    }
+
+    /**
+     * @param array $data
+     * @return bool|int
+     * @throws \Exception
+     * itwri 2019/12/19 13:59
+     */
+    public function update(array $data = [])
+    {
+        if(!empty($data)){
+            //set data
+            $this->set($data);
+        }
+
+        //get the update sql;
+        $SQL = $this->toUpdateSql($this->getLink(true)->getGrammar());
+
+        return $this->exec($SQL);
+    }
+
+    /**
+     * @return bool|int
+     * @throws \Exception
+     * itwri 2019/12/19 13:59
+     */
+    public function delete()
+    {
+        //get the delete sql
+        $SQL = $this->toDeleteSql($this->getLink(true)->getGrammar());
+
+        return $this->exec($SQL);
+    }
+
+    /**
+     * @return int
+     * @throws \Exception
+     * itwri 2019/12/19 13:59
+     */
+    public function count()
+    {
+        $this->limit(1);
+        //get the select sql
+        $SQL = $this->toCountSql($this->getLink()->getGrammar());
+
+        //query
+        $st = $this->query($SQL);
+
+        if ($st !== false) {
+            return intval($st->fetch(\PDO::FETCH_ASSOC)['__COUNT__']);
+        }
+        return 0;
+    }
+
+    /**
+     * @param string $fields
+     * @param int $fetch_type
+     * @return bool|mixed
+     * @throws \Exception
+     * itwri 2019/12/19 13:59
+     */
+    public function get($fields = '*', $fetch_type = \PDO::FETCH_ASSOC)
+    {
+        parent::fields($fields);
+
+        $this->limit(1);
+        //get the select sql
+        $SQL = $this->toSelectSql($this->getLink()->getGrammar());
+        //query
+        $st = $this->query($SQL);
+        if ($st !== false) {
+            //return the result
+            return $st->fetch($fetch_type);
+        }
+        return false;
+    }
+
+    /**
+     * @param string $fields
+     * @param int $fetch_type
+     * @return bool|mixed
+     * itwri 2019/12/19 14:29
+     */
+    public function first($fields = '*', $fetch_type = \PDO::FETCH_ASSOC){
+        return call_user_func_array([$this,'get'],[$fields,$fetch_type]);
+    }
+
+    /**
+     * @param null $fields
+     * @param int $fetch_type
+     * @return array
+     * @throws \Exception
+     * itwri 2019/12/19 13:59
+     */
+    public function getAll($fields = null, $fetch_type = \PDO::FETCH_ASSOC)
+    {
+        parent::fields($fields);
+
+        //get the select sql
+        $SQL = $this->toSelectSql($this->getLink()->getGrammar());
+
+        //query
+        $st = $this->query($SQL);
+        if ($st) {
+            return $st->fetchAll($fetch_type);
+        }
+        return array();
+    }
+
+    /**
+     * @param string $fields
+     * @param int $fetch_type
+     * @return mixed
+     */
+    function select($fields = '*', $fetch_type = \PDO::FETCH_ASSOC)
+    {
+        return call_user_func_array([$this, 'getAll'], func_get_args());
+    }
+
+    /**
+     * @param int $page
+     * @param int $pageSize
+     * @return array
+     * @throws \Exception
+     * itwri 2019/12/19 13:59
+     */
+    function paginator($page=1,$pageSize=10){
+
+        $page = $page < 1 ? 1 : $page;
+        $offset = ($page-1)*$pageSize;
+
+        if(func_num_args()<2){
+            $limit = $this->Limit->data();
+            isset($limit[1]) && $pageSize = $limit[1]>0?$limit[1]:$pageSize;
+        }
+
+        $this->limit($offset,$pageSize);
+
+        $SQL = $this->toCountSql($this->getLink()->getGrammar());
+
+        $total = 0;
+        $st = $this->query($SQL);
+        if ($st !== false) {
+            $total = intval($st->fetch(\PDO::FETCH_ASSOC)['__COUNT__']);
+        }
+
+        $totalPage = ceil($total/$pageSize);
+
+        $this->roll('select,from,join,where,group,having,order,limit');
+        $list = $this->select();
+
+
+        return ['total'=>$total,'data'=>$list,'totalPage'=>$totalPage,'page'=>$page];
+    }
+
+    /**
+     * @param $statement
+     * @return bool|\PDOStatement
+     */
+    public function query($statement)
+    {
+        $res = false;
+        $this->trace(function () use ($statement, &$res) {
+            if ($this->isWriteAction($statement)) {
+                $res = $this->getLink(true)->getPdo()->query($statement);
+            } else {
+                $res = $this->getLink()->getPdo()->query($statement);
+            }
+
+            //重置
+            $this->linkName = null;
+
+            $this->logSql($statement);
+
+            //
+            !empty($error_info) && $this->errorArr[] = $error_info;
+
+            if ($this->debug) {
+                print_r(sprintf("[SQL Query] : %s %s\r\n", $statement, ($res != false ? '[true]' : '[false]')));
+            }
+        });
+        return $res;
+    }
+
+    /**
+     * @param $statement
+     * @return bool|int
+     */
+    public function exec($statement)
+    {
+
+        $res = false;
+        $this->trace(function () use ($statement, &$res) {
+
+            $error_info = [];
+            if ($this->isWriteAction($statement)) {
+                $res = $this->getLink(true)->getPdo()->exec($statement);
+                $res === false && $error_info = $this->getLink(true)->getPdo()->errorInfo();
+            } else {
+                $res = $this->getLink()->getPdo()->exec($statement);
+                $res === false && $error_info = $this->getLink()->getPdo()->errorInfo();
+            }
+            $this->linkName = null;
+
+            $this->logSql($statement);
+
+            //
+            !empty($error_info) && $this->errorArr[] = $error_info;
+            if ($this->debug) {
+                print_r(sprintf("[SQL Execute] : %s %s\r\n", $statement, ($res != false ? '[true]' : '[false]')));
+                !empty($error_info) && print_r(sprintf("[SQL error]: %s\r\n", var_export($error_info, true)));
+            }
+        });
+        return $res;
+    }
+
+    /**
+     * @param $closure
+     * @return $this
+     * itwri 2019/12/2 16:33
+     */
+    public function masterHandle($closure)
+    {
+        $this->_sticky = true;
+        if (is_callable($closure)) {
+            call_user_func_array($closure, [$this]);
+        }
+        $this->_sticky = false;
+        return $this;
+    }
+
+    /**
+     * @param $statement
+     * @return bool
+     */
+    protected function isWriteAction($statement)
+    {
+        $statement = strtolower(trim($statement));
+        if (strpos($statement, 'insert') !== false
+            || strpos($statement, 'delete') !== false
+            || strpos($statement, 'update ') !== false
+            || strpos($statement, 'replace') !== false
+            || strpos($statement, 'truncate') !== false
+            || strpos($statement, 'create') !== false
+        ) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @return bool
+     * @throws \Exception
+     * itwri 2019/12/19 13:59
+     */
+    function startTrans(){
+        if(!$this->getLink()->getPdo()->inTransaction()){
+            return $this->getLink()->getPdo()->beginTransaction();
+        }
+        return true;
+    }
+
+    /**
+     * @return bool
+     * @throws \Exception
+     * itwri 2019/12/19 13:59
+     */
+    function commit(){
+        if($this->getLink()->getPdo()->inTransaction()){
+            return $this->getLink()->getPdo()->commit();
+        }
+        return false;
+    }
+
+
+    /**
+     * @return bool
+     * @throws \Exception
+     * itwri 2019/12/19 13:59
+     */
+    public function rollback()
+    {
+        if($this->getLink()->getPdo()->inTransaction()){
+            return $this->getLink()->getPdo()->rollBack();
+        }
+        return false;
+    }
+
+    /**
+     * @param \Closure $closure
+     * @return bool|string
+     * @throws \Exception
+     * itwri 2019/12/19 13:59
+     */
+    public function transaction(\Closure $closure){
+        $this->startTrans();
+        try{
+            $this->_sticky = true;
+            $res = call_user_func_array($closure,[$this]);
+            if($res === false){
+                throw new ErrorException('User Abort.');
+            }
+            $this->commit();
+            $this->_sticky = false;
+            return true;
+        }catch (\Exception $exception){
+            $this->_sticky = false;
+            $this->rollback();
+            return $exception->getMessage();
+        }
+    }
+
+
+    /**
+     * @param $callback
+     * @return $this
+     */
+    public function trace($callback)
+    {
+        if ($callback instanceof \Closure) {
+            $time_arr = explode(' ', microtime(false));
+            $start_time = $time_arr[0] + $time_arr[1];
+            $start_memory = memory_get_usage();
+            if ($this->debug) {
+                print_r(sprintf("[Start Time:%s, Memory:%skb]\r", date("H:i:s", intval($time_arr[1])) . substr($time_arr[0], 1), strval($start_memory)));
+            }
+            //callback
+            call_user_func_array($callback, array());
+            //end time
+            $time_arr = explode(' ', microtime(false));
+            $end_time = $time_arr[0] + $time_arr[1];
+            $send_memory = memory_get_usage();
+            if ($this->debug) {
+                $runtime = number_format($end_time - $start_time, 10);
+                $used_memory = number_format((memory_get_usage() - $start_memory) / 1024, 2);
+                print_r(sprintf("[End Time:%s, Memory:%skb, Runtime:%s]\r", date("H:i:s", intval($time_arr[1])) . substr($time_arr[0], 1), strval($send_memory), $runtime, $used_memory));
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * @var array
+     */
+    protected $logSQLs = array();
+
+    /**
+     * pop out the last one SQL;
+     * @return string
+     */
+    public function getLastSql()
+    {
+        $SQL = $this->logSQLs[count($this->logSQLs) - 1];
+        return $SQL ? $SQL : "";
+    }
+
+    /**
+     * @param string $sql
+     * @return $this
+     */
+    protected function logSql($sql)
+    {
+        $this->logSQLs[] = $sql;
+        return $this;
+    }
+
+    /**
+     * @return mixed|null
+     */
+    public function getErrorInfo(){
+        if(count($this->errorArr)>0){
+            return $this->errorArr[count($this->errorArr) - 1];
+        }
+        return null;
+    }
+
+    /**
+     * @param $field
+     * @param int $inc
+     * @return bool|int
+     * @throws \Exception
+     * itwri 2019/12/19 13:59
+     */
+    public function setInc($field, $inc = 1)
+    {
+        return $this->set($field,new Expression($field."+".$inc))->update();
+    }
+
+    /**
+     * @param $field
+     * @param int $inc
+     * @return bool|int
+     * @throws \Exception
+     * itwri 2019/12/19 13:59
+     */
+    public function setDec($field, $inc = 1)
+    {
+        return $this->set($field,new Expression($field."-".$inc))->update();
+    }
+
+}
