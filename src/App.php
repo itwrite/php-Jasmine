@@ -20,7 +20,7 @@ use Jasmine\library\http\Response;
 
 require_once 'library/file/File.php';
 require_once 'helper/Config.php';
-
+require_once 'common/functions.php';
 
 class App
 {
@@ -103,6 +103,30 @@ class App
      */
     function getResponse(){
         return $this->Response;
+    }
+
+    /**
+     * @return string
+     * itwri 2019/12/20 16:18
+     */
+    function getRootPath(){
+        return $this->rootPath;
+    }
+
+    /**
+     * @return mixed|string
+     * itwri 2019/12/20 16:18
+     */
+    function getAppPath(){
+        return $this->appPath;
+    }
+
+    /**
+     * @return mixed|string
+     * itwri 2019/12/20 16:18
+     */
+    function getRuntimePath(){
+        return $this->runtimePath;
     }
 
     /**
