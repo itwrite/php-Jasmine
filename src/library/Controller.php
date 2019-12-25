@@ -35,6 +35,7 @@ abstract class Controller
      * @var Template|null
      */
     protected $Template = null;
+
     /**
      * Controller constructor.
      * @param App|null $app
@@ -53,7 +54,7 @@ abstract class Controller
      * @param mixed $type
      * @return array|false|string
      */
-    function success($msg = '', $data = null, $type = 'json')
+    protected function success($msg = '', $data = null, $type = 'json')
     {
         if ($type == 'json' || $this->Request->isJson() || is_array($data)) {
             $this->Response->setContentType('application/json')->getHeader()->send();
@@ -69,7 +70,7 @@ abstract class Controller
      * @param mixed $type
      * @return array|false|string
      */
-    function error($msg = '', $code = 0, $data = [], $type = 'json')
+    protected function error($msg = '', $code = 0, $data = [], $type = 'json')
     {
         if ($type == 'json' || $this->Request->isJson() || is_array($data)) {
             $this->Response->setContentType('application/json')->getHeader()->send();
@@ -86,7 +87,7 @@ abstract class Controller
      *
      * @return App|null
      */
-    function app()
+    protected function app()
     {
         return $this->app;
     }
@@ -102,7 +103,7 @@ abstract class Controller
      * @param null $filter
      * @return http\Request|mixed|null
      */
-    function request($key = '', $default = null, $filter = null)
+    protected function request($key = '', $default = null, $filter = null)
     {
         if (func_num_args() == 0 || $key == null) {
             return $this->Request;
@@ -115,14 +116,15 @@ abstract class Controller
      * @return http\Request|null
      * itwri 2019/7/31 0:39
      */
-    function getRequest(){
+    protected function getRequest()
+    {
         return $this->Request;
     }
 
     /**
      * @return Response|null
      */
-    function getResponse()
+    protected function getResponse()
     {
         return $this->Response;
     }
@@ -130,8 +132,9 @@ abstract class Controller
     /**
      * itwri 2019/12/21 20:20
      */
-    function getTemplate(){
-        if(!$this->Template instanceof Template){
+    protected function getTemplate()
+    {
+        if (!$this->Template instanceof Template) {
             $viewDirectory = Config::get('view.directory');
 
             /**
@@ -143,18 +146,21 @@ abstract class Controller
                 'view',
             ]);
 
-            $this->Template = new Template($viewDirectory,$this->app()->getRuntimePath().DIRECTORY_SEPARATOR.'cache');
+
+            $this->Template = new Template($viewDirectory, $this->app()->getRuntimePath() . DIRECTORY_SEPARATOR . 'cache');
         }
         return $this->Template;
     }
+
     /**
      * @param $key
      * @param $value
      * @return $this
      * itwri 2019/12/20 16:26
      */
-    function assign($key,$value = ''){
-        call_user_func_array([$this->Template,'assign'],func_get_args());
+    protected function assign($key, $value = '')
+    {
+        call_user_func_array([$this->Template, 'assign'], func_get_args());
         return $this;
     }
 
@@ -162,27 +168,34 @@ abstract class Controller
      * @param $name
      * @param $data
      * @return string
-     * @throws \Exception
      * itwri 2019/12/20 16:20
      */
-    function fetch($name,$data = []){
-        /**
-         * 判断模块
-         */
-        strpos($name, '@') != false && list($module, $name) = explode('@', $name);
+    protected function fetch($name = '', $data = [])
+    {
 
-        if(isset($module)){
+        try {
+
+            $name = empty($name) ? implode('.', [$this->getRequest()->getModule(),$this->getRequest()->getController(),$this->getRequest()->getAction()]) : $name;
             /**
-             * view
+             * 判断模块
              */
-            $viewDirectory = implode(DIRECTORY_SEPARATOR, [
-                App::init()->getAppPath(),
-                isset($module) ? $module : App::init()->getRequest()->getModule(),
-                'view',
-            ]);
-            $this->getTemplate()->setViewDirectory($viewDirectory);
-        }
+            strpos($name, '@') != false && list($module, $name) = explode('@', $name);
 
-        return $this->getTemplate()->make($name,$data)->render();
+            if (isset($module)) {
+                /**
+                 * view
+                 */
+                $viewDirectory = implode(DIRECTORY_SEPARATOR, [
+                    App::init()->getAppPath(),
+                    isset($module) ? $module : App::init()->getRequest()->getModule(),
+                    'view',
+                ]);
+                $this->getTemplate()->setViewDirectory($viewDirectory);
+            }
+
+            return $this->getTemplate()->make($name, $data)->render();
+        } catch (\Exception $exception) {
+            return $exception->getMessage();
+        }
     }
 }
