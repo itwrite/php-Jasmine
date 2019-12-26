@@ -199,8 +199,7 @@ class Grammar
         $SQL = implode(',', array_map(function ($item) {
             return $this->wrapField($item);
         }, $select->data()));
-
-        return ($select->distinct == true ? "DISTINCT ":"").$SQL;
+        return ($select->distinct == true ? "DISTINCT ":"").(empty($SQL) ? '*' : $SQL);
     }
 
     /**
