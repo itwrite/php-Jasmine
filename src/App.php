@@ -146,7 +146,7 @@ class App
         /**
          *
          */
-        $this->Request = new Request(Config::get('app.request',[]));
+        $this->Request = new Request(Config::get('request',[]));
         $this->Response = new Response();
 
         try {
