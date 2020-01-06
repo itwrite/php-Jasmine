@@ -10,8 +10,8 @@ namespace Test\example\db;
 use Jasmine\library\db\Database;
 use Jasmine\library\db\grammar\Mysql;
 
-require_once __DIR__ . '/../../../framework/src/library/db/Database.php';
-require_once __DIR__ . '/../../../framework/src/library/db/grammar/Mysql.php';
+require_once __DIR__ . '/../../../src/library/db/Database.php';
+require_once __DIR__ . '/../../../src/library/db/grammar/Mysql.php';
 
 class DatabaseTest
 {
@@ -46,13 +46,25 @@ class DatabaseTest
         $res = $this->db->link(false)->table('ht_vip_withdrawal')->get();
         var_dump($res);
     }
+
+    /**
+     * itwri 2019/12/30 10:33
+     */
+    function testInsertAll(){
+        try{
+            $this->db->debug(1)->insertAll([['username'=>'asdfaf','password'=>'123'],['username'=>'asdfaf','password'=>'123'],['username'=>'asdfaf','password'=>'123']]);
+        }catch (\Exception $exception){
+            echo $exception->getMessage();
+        }
+
+    }
 }
 
 
 $test = new DatabaseTest();
 
 try{
-    $test->testMultipleDbConnection();
+    $test->testInsertAll();
 }catch (\Exception $exception){
     echo $exception->getMessage();
 }

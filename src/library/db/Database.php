@@ -124,6 +124,105 @@ class Database extends Builder implements DatabaseInterface
     }
 
     /**
+     * 批量插入
+     * @param array $data
+     * @param int $size
+     * @param bool $is_replace
+     * @return bool
+     * @throws \Exception
+     * itwri 2019/12/30 10:27
+     */
+    public function insertAll(Array $data,$size = 1000, $is_replace = false){
+
+        /**
+         * 处理数据
+         */
+        $insertData = [];
+        $tempData = [];
+        foreach ($data as $key => $datum) {
+            if (is_string($key) && (is_string($datum) || is_numeric($datum) || $datum instanceof Expression)) {
+                $insertData[$key] = $datum;
+            }
+
+            if(is_array($datum)){
+                $tempKey = implode('-',array_keys($datum));
+                if(!isset($tempData[$tempKey])){
+                    $tempData[$tempKey] = [];
+                }
+                $tempData[$tempKey] = $datum;
+            }
+        }
+
+        $k = implode('-',array_keys($insertData));
+        if(isset($tempData[$k])){
+            $tempData[$k][] = $insertData;
+        }
+
+        /**
+         * 开启事务
+         */
+        $this->startTrans();
+        try{
+
+            $Link = $this->getLink(true);
+
+            foreach ($tempData as $tempDatum) {
+                $count = count($tempDatum);
+                $newData = [];
+                $successCount = 0;
+                foreach ($tempDatum as $key => $datum) {
+                    $newData[] = $datum;
+
+                    if(count($newData) >= $size){
+
+                        //set data
+                        $this->set($newData);
+                        //get the insert sql
+                        $SQL = $this->toInsertSql($Link->getGrammar(), $is_replace);
+
+                        //execute the sql
+                        $num = $this->exec($SQL);
+                        $successCount += (int)$num;
+
+                        //已执行则重置
+                        $newData = [];
+
+                    }
+                }
+
+                //set data
+                $this->set($newData);
+                //get the insert sql
+                $SQL = $this->toInsertSql($Link->getGrammar(), $is_replace);
+
+                //execute the sql
+                $num = $this->exec($SQL);
+                $successCount += (int)$num;
+
+                //
+                if($successCount != $count){
+                    throw new \Exception('Error with the data.');
+                }
+            }
+
+            $this->commit();
+
+            return true;
+        }catch (\Exception $exception){
+
+            /**
+             * 回滚事务
+             */
+            $this->rollback();
+
+            if($this->debug == true){
+                die($exception->getMessage());
+            }
+            return false;
+        }
+    }
+
+    /**
      * @param array $data
      * @return bool|int
      * @throws \Exception

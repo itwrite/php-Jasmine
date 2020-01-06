@@ -70,7 +70,7 @@ class Grammar
         /**
          * 如果存在双引号或单引号开头，则直接返回
          */
-        if(preg_match('/^("|\').*$/i',$value)){
+        if (preg_match('/^("|\').*$/i', $value)) {
             return $value;
         }
 
@@ -199,7 +199,7 @@ class Grammar
         $SQL = implode(',', array_map(function ($item) {
             return $this->wrapField($item);
         }, $select->data()));
-        return ($select->distinct == true ? "DISTINCT ":"").(empty($SQL) ? '*' : $SQL);
+        return ($select->distinct == true ? "DISTINCT " : "") . (empty($SQL) ? '*' : $SQL);
     }
 
     /**
@@ -226,7 +226,7 @@ class Grammar
             if ($item instanceof JoinObject) {
                 $on = $item->getOn(); //Where
                 if ($on instanceof Where) {
-                    $on = $this->compileWhere($on,1);
+                    $on = $this->compileWhere($on, 1);
                 }
                 $sqlArr[] = implode(' ', array($item->getType(), $this->wrapTable($item->getTable()), 'ON (', $on, ')'));
             } else {
@@ -348,18 +348,20 @@ class Grammar
             return $this->wrapField($field);
         }, array_keys(reset($data))));
 
-        $VALUES = implode(',', array_map(function ($value) {
-            return "(" . implode(',', array_map(function ($val) {
+        $VALUES = implode(',', array_filter(array_map(function ($value) {
+            return is_array($value) && count($value) > 0 ? "(" . implode(',', array_map(function ($val) {
                     return $this->wrapValue($val);
-                }, array_values($value))) . ")";
-        }, $data));
+                }, array_values($value))) . ")" : "";
+        }, $data), function ($v) {
+            return !empty($v);
+        }));
 
         $from = $builder->getFrom();
         $FROM = $this->compileFrom($from);
         $FROM = explode(' ', $FROM)[0];
 
         $builder->clear();
-        return ($replace ? "REPLACE" : "INSERT") . " INTO {$FROM} ($FIELDS) VALUES $VALUES";
+        return ($replace ? "REPLACE" : "INSERT") . " INTO {$FROM} ($FIELDS) VALUES $VALUES;";
     }
 
     /**
@@ -391,7 +393,7 @@ class Grammar
 
         $builder->clear();
 
-        return "SELECT COUNT({$FIELDS}) AS __COUNT__ FROM {$TABLES} {$JOINS} {$WHERE} {$GROUP_BY} {$HAVING}";
+        return "SELECT COUNT({$FIELDS}) AS __COUNT__ FROM {$TABLES} {$JOINS} {$WHERE} {$GROUP_BY} {$HAVING};";
     }
 
     /**
@@ -432,7 +434,7 @@ class Grammar
         $LIMIT = empty($LIMIT) ? "" : " LIMIT {$LIMIT}";
 
         $builder->clear();
-        return "SELECT {$FIELDS} FROM {$TABLES}{$JOINS}{$WHERE}{$ORDER_BY}{$GROUP_BY}{$HAVING}{$LIMIT}";
+        return "SELECT {$FIELDS} FROM {$TABLES}{$JOINS}{$WHERE}{$ORDER_BY}{$GROUP_BY}{$HAVING}{$LIMIT};";
     }
 
     /**
@@ -449,7 +451,7 @@ class Grammar
         $WHERE = empty($WHERE) ? "" : " WHERE {$WHERE}";
 
         $builder->clear();
-        return "DELETE FROM {$TABLES}{$WHERE}";
+        return "DELETE FROM {$TABLES}{$WHERE};";
     }
 
     /**
@@ -473,6 +475,6 @@ class Grammar
         $SET = $this->compileSet($set);
 
         $builder->clear();
-        return "UPDATE {$TABLES}{$JOINS} SET {$SET}{$WHERE}";
+        return "UPDATE {$TABLES}{$JOINS} SET {$SET}{$WHERE};";
     }
 }

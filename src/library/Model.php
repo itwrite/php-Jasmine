@@ -38,6 +38,7 @@ use Jasmine\util\Str;
  * @method $this roll($option = '')
  *
  * @method int insert(Array $data = [], $is_replace = false)
+ * @method bool insertAll(Array $data,$size = 1000, \Closure $closure = null)
  * @method int delete()
  * @method int update(Array $data = [])
  * @method int count()
