@@ -266,9 +266,24 @@ class Arr
     {
         if (is_array($array)) {
             $keys = array_keys($array);
-            return $keys !== array_keys($keys);
+            return self::identicalValues($keys,array_keys($keys));
         }
         return false;
+    }
+
+    /**
+     * 判断两个数组的值是否相同
+     * @param $arrayA
+     * @param $arrayB
+     * @return bool
+     * itwri 2019/12/3 15:30
+     */
+    static public function identicalValues( $arrayA , $arrayB ) {
+
+        sort( $arrayA );
+        sort( $arrayB );
+
+        return $arrayA == $arrayB;
     }
 
     /**
