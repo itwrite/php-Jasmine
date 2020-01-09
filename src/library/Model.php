@@ -55,7 +55,7 @@ class Model
 {
     private $_db = null;
     
-    protected $pk = '';
+    protected $pk = 'id';
     protected $table_prefix = "";
     protected $table_name = "";
     protected $table_alias = "";
@@ -151,14 +151,11 @@ class Model
     }
 
     /**
-     *
-     * User: Peter
-     * Date: 2019/3/31
-     * Time: 19:31
-     *
      * @param int $id
      * @param int $fetch_type
      * @return bool|mixed
+     * @throws \Exception
+     * itwri 2020/1/10 0:23
      */
     function find($id=0,$fetch_type = \PDO::FETCH_ASSOC)
     {
