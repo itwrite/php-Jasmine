@@ -534,5 +534,3 @@ class App
         return strtolower(trim(preg_replace("/[A-Z]/", "_\\0", $name), "_"));
     }
 }
-
-//App::init();
