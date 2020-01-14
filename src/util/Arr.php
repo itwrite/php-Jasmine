@@ -167,8 +167,8 @@ class Arr
     /**
      * Get all of the given array except for a specified array of keys.
      *
-     * @param  array  $array
-     * @param  array|string  $keys
+     * @param  array $array
+     * @param  array|string $keys
      * @return array
      */
     public static function except($array, $keys)
@@ -258,6 +258,89 @@ class Arr
     }
 
     /**
+     * @param $array
+     * @return bool
+     * itwri 2020/1/7 11:21
+     */
+    static public function isAssoc($array)
+    {
+        if (is_array($array)) {
+            $keys = array_keys($array);
+            return self::identicalValues($keys,array_keys($keys));
+        }
+        return false;
+    }
+
+    /**
+     * 判断两个数组的值是否相同
+     * @param $arrayA
+     * @param $arrayB
+     * @return bool
+     * itwri 2019/12/3 15:30
+     */
+    static public function identicalValues( $arrayA , $arrayB ) {
+
+        sort( $arrayA );
+        sort( $arrayB );
+
+        return $arrayA == $arrayB;
+    }
+
+    /**
+     * 将列表转成树形
+     * @param array $list
+     * @param int $parent_id
+     * @param string $parent_key
+     * @return array
+     * itwri 2020/1/7 11:27
+     */
+    static public function toTree(array $list, $parent_id = 0, $parent_key = 'parent_id')
+    {
+        $result = [];
+        if (self::isAssoc($list)) {
+            // 找出子项 和 剩下项
+            $res1 = self::findChildren($list, $parent_id, $parent_key);
+
+            if (!empty($res1['children'])) {
+                foreach ($res1['children'] as $child) {
+
+                    $children = self::toTree($res1['remain'], $child['id'], $parent_key);
+                    if (!empty($children)) {
+                        $child['children'] = $children;
+                    }
+
+                    $result[] = $child;
+                }
+            }
+
+        }
+        return $result;
+    }
+
+    /**
+     * 找出子项 和 剩下项
+     * @param $data
+     * @param $parent_id
+     * @param string $parent_key
+     * @return array
+     * itwri 2020/1/7 11:27
+     */
+    static public function findChildren($data, $parent_id, $parent_key = 'parent_id')
+    {
+        $result = ['children' => [], 'remain' => []];
+        if (self::isAssoc($data)) {
+            foreach ($data as $datum) {
+                if (isset($datum[$parent_key]) && $datum[$parent_key] == $parent_id) {
+                    $result['children'][] = $datum;
+                } else {
+                    $result['remain'][] = $datum;
+                }
+            }
+        }
+        return $result;
+    }
+
+    /**
      * @param $config
      * @return array
      */
@@ -304,6 +387,11 @@ class Arr
         return $result;
     }
 
+    /**
+     * @param $name
+     * @param $arguments
+     * itwri 2020/1/7 11:17
+     */
     function __call($name, $arguments)
     {
         if (is_callable("self::" . $name)) {

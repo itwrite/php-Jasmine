@@ -226,7 +226,7 @@ class Grammar
             if ($item instanceof JoinObject) {
                 $on = $item->getOn(); //Where
                 if ($on instanceof Where) {
-                    $on = $this->compileWhere($on, 1);
+                    $on = $this->compileWhere($on);
                 }
                 $sqlArr[] = implode(' ', array($item->getType(), $this->wrapTable($item->getTable()), 'ON (', $on, ')'));
             } else {
@@ -239,11 +239,10 @@ class Grammar
 
     /**
      * @param Where $where
-     * @param bool $isSub
      * @return string
      * itwri 2019/8/8 21:14
      */
-    protected function compileWhere(Where &$where, $isSub = false)
+    protected function compileWhere(Where &$where)
     {
         $sqlArr = array();
         foreach ($where->data() as $i => $condition) {

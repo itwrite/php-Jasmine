@@ -172,6 +172,24 @@ class Url extends Eloquent
     }
 
     /**
+     * @param $key
+     * @param null $value
+     * @return $this
+     * itwri 2020/1/6 23:19
+     */
+    public function setParam($key,$value = null){
+        $params = $this->getParam();
+
+        if(is_array($key)){
+            $params = array_merge($params,$key);
+        }elseif (is_string($key)){
+            $params = array_merge($params,[$key => $value]);
+        }
+        $this->set('query',http_build_query($params));
+        return $this;
+    }
+
+    /**
      *
      * @param string $path key1/value1/key2/value2/key3/value3
      * @param string $sep

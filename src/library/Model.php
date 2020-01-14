@@ -38,11 +38,11 @@ use Jasmine\util\Str;
  * @method $this roll($option = '')
  *
  * @method int insert(Array $data = [], $is_replace = false)
- * @method bool insertAll(Array $data,$size = 1000, \Closure $closure = null)
+ * @method bool insertAll(Array $data, $size = 1000, \Closure $closure = null)
  * @method int delete()
  * @method int update(Array $data = [])
  * @method int count()
- * @method array paginator($page=1,$pageSize=10)
+ * @method array paginator($page = 1, $pageSize = 10)
  * @method array select($fields = '*', $fetch_type = \PDO::FETCH_ASSOC)
  *
  * @method string getLastSql()
@@ -54,8 +54,8 @@ use Jasmine\util\Str;
 class Model
 {
     private $_db = null;
-    
-    protected $pk = '';
+
+    protected $pk = 'id';
     protected $table_prefix = "";
     protected $table_name = "";
     protected $table_alias = "";
@@ -151,20 +151,17 @@ class Model
     }
 
     /**
-     *
-     * User: Peter
-     * Date: 2019/3/31
-     * Time: 19:31
-     *
      * @param int $id
      * @param int $fetch_type
      * @return bool|mixed
+     * @throws \Exception
+     * itwri 2020/1/10 0:23
      */
-    function find($id=0,$fetch_type = \PDO::FETCH_ASSOC)
+    function find($id = 0, $fetch_type = \PDO::FETCH_ASSOC)
     {
         $this->getDb()->getFrom()->clear()->table($this->getTableFullName());
-        if(is_string($id) || is_numeric($id)){
-            $this->where($this->getPk(),'=',$id);
+        if (func_num_args() > 0 && (is_string($id) || is_numeric($id))) {
+            $this->where($this->getPk(), '=', $id);
         }
         return $this->getDb()->get($fetch_type);
     }
@@ -180,11 +177,12 @@ class Model
      * @return array
      * itwri 2019/8/2 1:28
      */
-    public function filterData($data){
+    public function filterData($data)
+    {
         $result = [];
-        if(empty($this->_fields)){
-            $rt = $this->query('desc '.$this->getTableFullName());
-            if($rt!=false){
+        if (empty($this->_fields)) {
+            $rt = $this->query('desc ' . $this->getTableFullName());
+            if ($rt != false) {
                 $list = $rt->fetchAll(\PDO::FETCH_ASSOC);
                 foreach ($list as $item) {
                     self::$_fields[$item['Field']] = $item['Type'];
@@ -192,10 +190,10 @@ class Model
             }
         }
 
-        if(is_array($data)){
+        if (is_array($data)) {
             $fields = array_keys($this->_fields);
             foreach ($fields as $field) {
-                if(isset($data[$field])){
+                if (isset($data[$field])) {
                     $result[$field] = $data[$field];
                 }
             }
@@ -203,22 +201,6 @@ class Model
 
         return $result;
     }
-
-    /**
-     * @param $field
-     * @param string $value
-     * @return $this
-     * itwri 2019/8/3 23:52
-     */
-//    function set($field, $value = ''){
-//        if(is_array($field)){
-//            $this->getDb()->set($this->filterData($field));
-//            return $this;
-//        }elseif (func_num_args()>1){
-//            $this->getDb()->set($this->filterData([$field=>$value]));
-//        }
-//        return $this;
-//    }
 
     /**
      *
