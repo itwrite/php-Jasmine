@@ -138,7 +138,7 @@ abstract class Controller
             $viewDirectory = Config::get('view.directory');
 
             /**
-             * view
+             * view directory
              */
             !is_dir($viewDirectory) && $viewDirectory = implode(DIRECTORY_SEPARATOR, [
                 App::init()->getAppPath(),
@@ -146,8 +146,17 @@ abstract class Controller
                 'view',
             ]);
 
+            /**
+             * cache directory
+             */
+            $cacheDirectory = Config::get('view.cache.directory');
+            !is_dir($cacheDirectory) && $cacheDirectory = implode(DIRECTORY_SEPARATOR, [
+                App::init()->getRuntimePath(),
+                'views',
+                App::init()->getRequest()->getModule(),
+            ]);
 
-            $this->Template = new Template($viewDirectory, $this->app()->getRuntimePath() . DIRECTORY_SEPARATOR . 'cache');
+            $this->Template = new Template($viewDirectory, $cacheDirectory);
         }
         return $this->Template;
     }
