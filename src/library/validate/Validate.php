@@ -282,7 +282,7 @@ class Validate
                         /**
                          * 内部方法，方法名加前缀,转驼峰
                          */
-                        $method = 'is' . $this->studly($rule);
+                        $method = 'rule' . $this->studly($rule);
 
                         /**
                          * 如果存在规则方法才去校验
@@ -341,7 +341,7 @@ class Validate
      * @return bool
      * itwri 2019/8/1 18:37
      */
-    function isRequire($value)
+    function ruleRequire($value)
     {
         $value = is_string($value) ? trim($value) : $value;
         if($value === 0 || $value == '0'){
@@ -361,7 +361,7 @@ class Validate
      * @return bool
      * itwri 2019/8/1 22:49
      */
-    function isLength($value, $min, $max = null)
+    function ruleLength($value, $min, $max = null)
     {
         $len = function_exists('mb_strlen') ? mb_strlen($value) : strlen($value);
         if (func_num_args() < 3) {
@@ -379,7 +379,7 @@ class Validate
      * @return bool
      * itwri 2019/8/1 23:34
      */
-    function isIn($value)
+    function ruleIn($value)
     {
         return in_array($value, array_slice(func_get_args(), 1));
     }
@@ -389,7 +389,7 @@ class Validate
      * @return bool
      * itwri 2019/8/27 0:13
      */
-    function isNotIn($value)
+    function ruleNotIn($value)
     {
         return !call_user_func_array([$this, 'isIn'], func_get_args());
     }
@@ -400,7 +400,7 @@ class Validate
      * @return bool
      * itwri 2019/8/3 16:33
      */
-    function isNumber($value)
+    function ruleNumber($value)
     {
         return is_numeric($value);
     }
@@ -411,9 +411,9 @@ class Validate
      * @return bool
      * itwri 2019/8/3 21:32
      */
-    function isInt($value)
+    function ruleInt($value)
     {
-        return $this->isNumber($value) && strpos($value, '.') == false;
+        return $this->ruleNumber($value) && strpos($value, '.') == false;
     }
 
     /**
@@ -422,9 +422,9 @@ class Validate
      * @return bool
      * itwri 2019/8/4 22:09
      */
-    function isInteger($value)
+    function ruleInteger($value)
     {
-        return $this->isInt($value) && $value >= 0;
+        return $this->ruleInt($value) && $value >= 0;
     }
 
     /**
@@ -432,7 +432,7 @@ class Validate
      * @return bool
      * itwri 2019/8/27 0:52
      */
-    function isFloat($value)
+    function ruleFloat($value)
     {
         return filter_var($value, FILTER_VALIDATE_FLOAT) !== false;
     }
@@ -445,9 +445,9 @@ class Validate
      * @return bool
      * itwri 2019/8/4 22:12
      */
-    function isBetween($value, $min, $max)
+    function ruleBetween($value, $min, $max)
     {
-        if ($this->isNumber($value) && func_num_args() > 2) {
+        if ($this->ruleNumber($value) && func_num_args() > 2) {
             return $value >= $min && $value <= $max;
         }
         return false;
@@ -460,9 +460,9 @@ class Validate
      * @return bool
      * itwri 2019/8/27 0:51
      */
-    function isRange($value, $min, $max)
+    function ruleRange($value, $min, $max)
     {
-        return $this->isBetween($value, $min, $max);
+        return $this->ruleBetween($value, $min, $max);
     }
 
     /**
@@ -471,7 +471,7 @@ class Validate
      * @return bool
      * itwri 2019/8/23 0:46
      */
-    function isEq($value, $val)
+    function ruleEq($value, $val)
     {
         return $value == $val;
     }
@@ -482,7 +482,7 @@ class Validate
      * @return bool
      * itwri 2019/8/27 0:36
      */
-    function isDiff($value, $val)
+    function ruleDiff($value, $val)
     {
         return !call_user_func_array([$this, 'isEq'], func_get_args());
     }
@@ -491,7 +491,7 @@ class Validate
      * @return bool
      * itwri 2019/8/27 0:36
      */
-    function isDifferent()
+    function ruleDifferent()
     {
         return !call_user_func_array([$this, 'isDiff'], func_get_args());
     }
@@ -503,7 +503,7 @@ class Validate
      * @return bool
      * itwri 2019/8/16 13:12
      */
-    function isMin($value, $min)
+    function ruleMin($value, $min)
     {
         return $value >= $min;
     }
@@ -514,7 +514,7 @@ class Validate
      * @return bool
      * itwri 2019/8/16 14:09
      */
-    function isMax($value, $max)
+    function ruleMax($value, $max)
     {
         return $value <= $max;
     }
@@ -524,7 +524,7 @@ class Validate
      * @return bool
      * itwri 2019/8/16 14:11
      */
-    function isEmail($value)
+    function ruleEmail($value)
     {
         if (!$value) return false;
         return filter_var($value, FILTER_VALIDATE_EMAIL) !== false;
@@ -535,7 +535,7 @@ class Validate
      * @return bool
      * itwri 2019/8/23 0:27
      */
-    function isBool($value)
+    function ruleBool($value)
     {
         return in_array($value, [true, false, 0, 1, '0', '1'], true);
     }
@@ -546,9 +546,9 @@ class Validate
      * @return bool
      * itwri 2019/8/23 0:27
      */
-    function isBoolean($value)
+    function ruleBoolean($value)
     {
-        return $this->isBool($value);
+        return $this->ruleBool($value);
     }
 
     /**
@@ -556,7 +556,7 @@ class Validate
      * @return bool
      * itwri 2019/8/23 0:37
      */
-    function isDate($value)
+    function ruleDate($value)
     {
         return strtotime($value) !== false;
     }
@@ -566,7 +566,7 @@ class Validate
      * @return bool
      * itwri 2019/8/23 0:42
      */
-    function isArray($value)
+    function ruleArray($value)
     {
         return is_array($value);
     }
@@ -576,7 +576,7 @@ class Validate
      * @return bool
      * itwri 2019/8/27 0:50
      */
-    function isUrl($value)
+    function ruleUrl($value)
     {
         return filter_var($value, FILTER_VALIDATE_URL) !== false;
     }
@@ -587,7 +587,7 @@ class Validate
      * @return bool
      * itwri 2019/9/6 1:11
      */
-    function isIp($value, $type = 4)
+    function ruleIp($value, $type = 4)
     {
         $flag = $type == 6 ? FILTER_FLAG_IPV6 : FILTER_FLAG_IPV4;
         return filter_var($value, FILTER_VALIDATE_IP, $flag) !== false;
@@ -599,7 +599,7 @@ class Validate
      * @return false|int
      * itwri 2019/9/15 21:19
      */
-    function isRegExp($value,$rule){
+    function ruleRegExp($value,$rule){
         $args = func_get_args();
         $value = array_shift($args);
         $pattern = implode('',$args);
