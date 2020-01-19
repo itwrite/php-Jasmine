@@ -476,7 +476,7 @@ class App
                         }
                     }
 
-                    throw new \Exception("class not exists:" . $class);
+                    throw new \Exception("class not exists:" . str_replace(__DIR__,'',$class));
                 }catch (\Exception $exception){
                     $this->debug && print_r("Error: " . $exception->getMessage() . PHP_EOL);
                     $this->debug && print_r($exception->getTraceAsString());
