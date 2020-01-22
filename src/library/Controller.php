@@ -58,7 +58,7 @@ abstract class Controller
     {
         if ($type == 'json' || $this->Request->isJson() || is_array($data)) {
             $this->Response->setContentType('application/json')->getHeader()->send();
-            return json_encode(['code' => 200, 'message' => $msg, 'data' => $data]);
+            return json_encode(['code' => 200, 'message' => lang($msg), 'data' => $data]);
         }
         return $data;
     }
