@@ -159,7 +159,7 @@ class App
                 throw new \ErrorException("Module can not be empty");
             }
 
-            $controller = $this->Request->getController();
+            $controller = ucfirst($this->Request->getController());
 
 
             if (empty($controller)) {

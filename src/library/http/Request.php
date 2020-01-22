@@ -326,7 +326,6 @@ class Request
                 return strtoupper($match[1]);
             }, array_pop($array));
 
-            $class = ucfirst($class);
             $path = $array ? implode('\\', $array) . '\\' : '';
             $this->controller = $path . $class;
         }
