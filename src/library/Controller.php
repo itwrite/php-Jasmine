@@ -70,11 +70,11 @@ abstract class Controller
      * @param mixed $type
      * @return array|false|string
      */
-    protected function error($msg = '', $code = 0, $data = [], $type = 'json')
+    protected function error($msg = '', $code = 0, $data = null, $type = 'json')
     {
         if ($type == 'json' || $this->Request->isJson() || is_array($data)) {
             $this->Response->setContentType('application/json')->getHeader()->send();
-            return json_encode(['code' => intval($code), 'message' => $msg, 'data' => $data]);
+            return json_encode(['code' => intval($code), 'message' => lang($msg), 'data' => $data]);
         }
         return $data;
     }

@@ -105,3 +105,12 @@ function url($route, $params = [], $root = true)
 
     return $Url->setParam($params)->toString();
 }
+
+/**
+ * @param $key
+ * @return mixed
+ * itwri 2020/1/22 15:03
+ */
+function lang($key){
+    return \Jasmine\helper\Config::get(implode('.',['lang','languages',\Jasmine\helper\Config::get('lang.default','zh-cn'),$key]),$key);
+}
