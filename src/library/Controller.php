@@ -72,6 +72,17 @@ abstract class Controller
      */
     protected function error($msg = '', $code = 0, $data = null, $type = 'json')
     {
+        /**
+         * 如果参数小于2，即只有一个参数，或者传入的code 是null
+         * 则参考msg是否为数字
+         */
+        if(func_num_args()<2 || is_null($code)){
+            $code = is_numeric($msg) ? $msg : $code;
+        }
+
+        /**
+         * 符合以下条件的，返回json字符串内容
+         */
         if ($type == 'json' || $this->Request->isJson() || is_array($data)) {
             $this->Response->setContentType('application/json')->getHeader()->send();
             return json_encode(['code' => intval($code), 'message' => lang($msg), 'data' => $data]);
