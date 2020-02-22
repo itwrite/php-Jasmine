@@ -372,7 +372,7 @@ class Database extends Builder implements DatabaseInterface
         $list = $this->select();
 
 
-        return ['total'=>$total,'data'=>$list,'pages_count'=>$totalPage,'page'=>$page];
+        return ['total'=>$total,'items'=>$list,'pages_count'=>$totalPage,'page'=>$page];
     }
 
     /**
