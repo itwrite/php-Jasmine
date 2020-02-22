@@ -22,7 +22,7 @@ class Cache implements CacheInterface
     function __construct($type, $options = [])
     {
         $type = ucfirst($type);
-        $class = "Jasmine\library\cache\driver\\{$type}";
+        $class = __NAMESPACE__."\\driver\\{$type}";
         $this->handler = new $class($options);
     }
 
@@ -118,5 +118,21 @@ class Cache implements CacheInterface
     function store($name, $value, $expire = 0)
     {
         return $this->set($name, $value, $expire);
+    }
+
+    /**
+     * @param $name
+     * itwri 2020/2/17 15:18
+     */
+    function delete($name){
+        //
+        $key = $this->getCacheKey($name);
+
+        //
+        $res = $this->getHandler()->rm($key);
+        if($res && isset($this->data[$key])){
+            unset($this->data[$key]);
+        }
+        return $res;
     }
 }

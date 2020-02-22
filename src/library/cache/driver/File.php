@@ -32,7 +32,7 @@ class File implements DriverInterface
      */
     function getFilePath($key)
     {
-        return rtrim($this->rootPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $key;
+        return rtrim($this->rootPath, DIRECTORY_SEPARATOR) . '/' . $key;
     }
 
     /**

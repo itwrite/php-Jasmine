@@ -12,6 +12,7 @@ defined('DS') or define('DS', DIRECTORY_SEPARATOR);
 
 use Jasmine\helper\Server;
 use Jasmine\helper\Config;
+use Jasmine\library\cache\Cache;
 use Jasmine\library\console\Console;
 use Jasmine\library\db\Database;
 use Jasmine\library\file\File;
@@ -130,6 +131,21 @@ class App
     }
 
     /**
+     * @var Cache|null
+     */
+    static protected $Cache = null;
+
+    /**
+     * @return Cache|null
+     * itwri 2020/2/12 17:05
+     */
+    function getCache(){
+        if(self::$Cache == null){
+            self::$Cache = new Cache(Config::get('cache.type',''),['root_path'=>Config::get('cache.path')]);
+        }
+        return self::$Cache;
+    }
+    /**
      * @param null $callback
      * itwri 2019/7/31 0:38
      */
@@ -176,36 +192,34 @@ class App
              */
             $controller_class = $this->parseAppClass($module, 'controller', $controller);
 
-//            echo "fff:";die($controller_class);
+            /**
+             * 加载公共文件
+             */
+            File::import(Config::get('PATH_COMMON', ''));
+            /**
+             * 加载公共文件
+             */
+            File::import(implode(DS, [Config::get('PATH_APPS', ''), 'common.php']));
+
+            /**
+             * 加载模块公共文件
+             */
+            File::import(implode(DS, [Config::get('PATH_APPS', ''), $module, 'common.php']));
+
+            /**
+             * 加载模块下的配置
+             */
+            Config::load(implode(DS, [Config::get('PATH_APPS', ''), $module, 'config']));
+
             /**
              * 实例化
              */
-            $controller_instance = new $controller_class();
+            $controller_instance = new $controller_class($this);
 
             /**
              * 检查操作的合法性，并调起对应的操作方法
              */
             if (!empty($action) && is_callable(array($controller_instance, $action))) {
-
-                /**
-                 * 加载公共文件
-                 */
-                File::import(Config::get('PATH_COMMON', ''));
-
-                /**
-                 * 加载公共文件
-                 */
-                File::import(implode(DS, [Config::get('PATH_APPS', ''), 'common.php']));
-
-                /**
-                 * 加载模块公共文件
-                 */
-                File::import(implode(DS, [Config::get('PATH_APPS', ''), $module, 'common.php']));
-
-                /**
-                 * 加载模块下的配置
-                 */
-                Config::load(implode(DS, [Config::get('PATH_APPS', ''), $module, 'config']));
 
                 //调用对应的操作方法方
                 $this->getResponse()->setData(call_user_func_array(array($controller_instance, $action), array($this->getRequest())));
@@ -264,32 +278,35 @@ class App
             $controller_class = $this->parseAppClass($module, 'command', $controller);
 
             /**
+             * 加载公共文件
+             */
+            File::import(Config::get('PATH_COMMON', ''));
+            /**
+             * 加载公共方法
+             */
+            File::import(implode(DS, [Config::get('PATH_APPS', ''), 'common.php']));
+
+            /**
+             * 加载模块方法
+             */
+            File::import(implode(DS, [Config::get('PATH_APPS', ''), $module, 'common.php']));
+
+            /**
+             * 加载模块下的配置
+             */
+            Config::load(implode(DS, [Config::get('PATH_APPS', ''), $module, 'config']));
+
+
+            /**
              * 实例化
              */
-            $controller_instance = new $controller_class();
+            $controller_instance = new $controller_class($this);
+
             /**
              * 检查操作的合法性，并调起对应的操作方法
              */
             if (!empty($action) && is_callable(array($controller_instance, $action))) {
 
-                /**
-                 * 加载公共文件
-                 */
-                File::import(Config::get('PATH_COMMON', ''));
-                /**
-                 * 加载公共方法
-                 */
-                File::import(implode(DS, [Config::get('PATH_APPS', ''), 'common.php']));
-
-                /**
-                 * 加载模块方法
-                 */
-                File::import(implode(DS, [Config::get('PATH_APPS', ''), $module, 'common.php']));
-
-                /**
-                 * 加载模块下的配置
-                 */
-                Config::load(implode(DS, [Config::get('PATH_APPS', ''), $module, 'config']));
                 //调用对应的操作方法方
                 echo call_user_func_array(array($controller_instance, $action), array($this));
                 die();
