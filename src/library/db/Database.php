@@ -39,12 +39,28 @@ class Database extends Builder implements DatabaseInterface
      */
     private $_sticky = false;
 
+    /**
+     * @var array
+     */
     protected $errorArr = [];
+
+    /**
+     * @var array
+     */
+    protected $logConfig = [
+        'directory'=> ''
+    ];
 
     function __construct(array $config)
     {
         parent::__construct();
 
+        /**
+         * 如果有日志的配置
+         */
+        if(isset($config['log']) && is_array($config['log'])){
+            $this->logConfig = array_merge( $this->logConfig, $config['log']);
+        }
         $this->tablePrefix = isset($config['table_prefix'])?$config['table_prefix']:'';
         $this->Connection = new Connection($config);
     }
@@ -210,13 +226,15 @@ class Database extends Builder implements DatabaseInterface
             return true;
         }catch (\Exception $exception){
 
+            $this->errorArr[] = (string)$exception;
+
             /**
              * 回滚事务
              */
             $this->rollback();
 
             if($this->debug == true){
-                die($exception->getMessage());
+                die((string)$exception);
             }
             return false;
         }
@@ -383,22 +401,45 @@ class Database extends Builder implements DatabaseInterface
     {
         $res = false;
         $this->trace(function () use ($statement, &$res) {
+
+            $time_arr = explode(' ', microtime(false));
+            $start_time = $time_arr[0] + $time_arr[1];
+
+            /**
+             * =====================================================
+             */
+            $error_info = [];
             if ($this->isWriteAction($statement)) {
                 $res = $this->getLink(true)->getPdo()->query($statement);
+                $res === false && $error_info = $this->getLink(true)->getPdo()->errorInfo();
             } else {
                 $res = $this->getLink()->getPdo()->query($statement);
+                $res === false && $error_info = $this->getLink()->getPdo()->errorInfo();
             }
+            /**
+             * =====================================================
+             */
+
+            $time_arr = explode(' ', microtime(false));
+            $end_time = $time_arr[0] + $time_arr[1];
+
+            $runtime = number_format($end_time - $start_time, 10);
+
+            $log_info = sprintf("SQL Query: %s %s\r\n", $statement, ($res != false ? '[true' : '[false').",Runtime:{$runtime}]");
+
+            $this->log($log_info);
 
             //重置
             $this->linkName = null;
 
-            $this->logSql($statement);
+            $this->cacheSql($statement);
 
             //
             !empty($error_info) && $this->errorArr[] = $error_info;
 
             if ($this->debug) {
-                print_r(sprintf("[SQL Query] : %s %s\r\n", $statement, ($res != false ? '[true]' : '[false]')));
+                print_r($log_info);
+                !empty($error_info) && print_r(sprintf("SQL Error: %s\r\n", var_export($error_info, true)));
             }
         });
         return $res;
@@ -414,6 +455,9 @@ class Database extends Builder implements DatabaseInterface
         $res = false;
         $this->trace(function () use ($statement, &$res) {
 
+            $time_arr = explode(' ', microtime(false));
+            $start_time = $time_arr[0] + $time_arr[1];
+
             $error_info = [];
             if ($this->isWriteAction($statement)) {
                 $res = $this->getLink(true)->getPdo()->exec($statement);
@@ -422,15 +466,25 @@ class Database extends Builder implements DatabaseInterface
                 $res = $this->getLink()->getPdo()->exec($statement);
                 $res === false && $error_info = $this->getLink()->getPdo()->errorInfo();
             }
+
+            $time_arr = explode(' ', microtime(false));
+            $end_time = $time_arr[0] + $time_arr[1];
+
+            $runtime = number_format($end_time - $start_time, 10);
+
+            $log_info = sprintf("SQL Execute: %s %s\r\n", $statement, ($res != false ? '[true' : '[false').",Runtime:{$runtime}]");
+
+            $this->log($log_info);
+
             $this->linkName = null;
 
-            $this->logSql($statement);
+            $this->cacheSql($statement);
 
             //
             !empty($error_info) && $this->errorArr[] = $error_info;
             if ($this->debug) {
-                print_r(sprintf("[SQL Execute] : %s %s\r\n", $statement, ($res != false ? '[true]' : '[false]')));
-                !empty($error_info) && print_r(sprintf("[SQL error]: %s\r\n", var_export($error_info, true)));
+                print_r($log_info);
+                !empty($error_info) && print_r(sprintf("SQL Error: %s\r\n", var_export($error_info, true)));
             }
         });
         return $res;
@@ -528,7 +582,11 @@ class Database extends Builder implements DatabaseInterface
         }catch (\Exception $exception){
             $this->_sticky = false;
             $this->rollback();
-            return $exception->getMessage();
+
+            $this->log((string)$exception);
+
+            $this->errorArr[] = $exception->getMessage();
+            return false;
         }
     }
 
@@ -540,23 +598,10 @@ class Database extends Builder implements DatabaseInterface
     public function trace($callback)
     {
         if ($callback instanceof \Closure) {
-            $time_arr = explode(' ', microtime(false));
-            $start_time = $time_arr[0] + $time_arr[1];
-            $start_memory = memory_get_usage();
-            if ($this->debug) {
-                print_r(sprintf("[Start Time:%s, Memory:%skb]\r", date("H:i:s", intval($time_arr[1])) . substr($time_arr[0], 1), strval($start_memory)));
-            }
-            //callback
+            /**
+             * do something
+             */
             call_user_func_array($callback, array());
-            //end time
-            $time_arr = explode(' ', microtime(false));
-            $end_time = $time_arr[0] + $time_arr[1];
-            $send_memory = memory_get_usage();
-            if ($this->debug) {
-                $runtime = number_format($end_time - $start_time, 10);
-                $used_memory = number_format((memory_get_usage() - $start_memory) / 1024, 2);
-                print_r(sprintf("[End Time:%s, Memory:%skb, Runtime:%s]\r", date("H:i:s", intval($time_arr[1])) . substr($time_arr[0], 1), strval($send_memory), $runtime, $used_memory));
-            }
         }
         return $this;
     }
@@ -580,7 +625,7 @@ class Database extends Builder implements DatabaseInterface
      * @param string $sql
      * @return $this
      */
-    protected function logSql($sql)
+    protected function cacheSql($sql)
     {
         $this->logSQLs[] = $sql;
         return $this;
@@ -620,4 +665,42 @@ class Database extends Builder implements DatabaseInterface
         return $this->set($field,new Expression($field."-".$inc))->update();
     }
 
+    /**
+     * @param $content
+     * @param string $error_level
+     * itwri 2020/2/26 0:32
+     */
+    public function log($content,$error_level = 'info'){
+        try{
+
+            if(!is_writable($this->logConfig['directory'])){
+                throw new \ErrorException('the log directory cannot be written.');
+            }
+            $path = $this->logConfig['directory'].'/logs/'.date('Ymd');
+            if(!is_dir($path)){
+                @mkdir($path,755,true);
+            }
+
+            $log_file = $path."/".date('d').".log";
+
+            if(is_file($log_file)){
+                $file_size = filesize($log_file);
+                $file_time = filectime($log_file);
+                if($file_size > 1024 * 1024 *2){
+                    @rename($log_file,$path."/".date('d')."-".$file_time.".log");
+                }
+            }
+
+            $content = ((is_string($content)||is_numeric($content))?$content:var_export($content, true));
+
+            //end time
+            $time_arr = explode(' ', microtime(false));
+
+            @file_put_contents($log_file, '['.date('Y-m-d H:i:s').$time_arr[0]."] [{$error_level}] {$content}", FILE_APPEND);
+
+
+        }catch (\ErrorException $exception){
+            die((string)$exception);
+        }
+    }
 }

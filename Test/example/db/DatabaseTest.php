@@ -27,7 +27,7 @@ class DatabaseTest
 
     function testLink()
     {
-        $res = $this->db->link('a')->table('ht_vip_withdrawal')->select();
+        $res = $this->db->link('read')->table('aq_admin')->select();
 
         var_dump($res);
     }
@@ -64,7 +64,7 @@ class DatabaseTest
 $test = new DatabaseTest();
 
 try{
-    $test->testInsertAll();
+    $test->testLink();
 }catch (\Exception $exception){
     echo $exception->getMessage();
 }

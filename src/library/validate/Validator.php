@@ -9,7 +9,7 @@
 namespace Jasmine\library\validate;
 
 
-class Validate
+class Validator
 {
     protected $messages = [];
     protected $rules = [];
@@ -28,7 +28,7 @@ class Validate
     /**
      * @param array $rules
      * @param array $messages
-     * @return Validate
+     * @return Validator
      * itwri 2019/8/18 12:53
      */
     static function make(array $rules = [], array $messages = [])

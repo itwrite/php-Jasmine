@@ -111,6 +111,17 @@ class Request
         }
     }
 
+    /**
+     * @param array $keys
+     * @return array|bool|mixed|string
+     * itwri 2020/2/25 22:20
+     */
+    function only(array $keys = []){
+        if(func_num_args() == 0){
+            return $this->param();
+        }
+        return Arr::only($this->param(),$keys);
+    }
 
     /**
      *

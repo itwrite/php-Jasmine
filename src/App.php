@@ -10,6 +10,7 @@ namespace Jasmine;
 
 defined('DS') or define('DS', DIRECTORY_SEPARATOR);
 
+use Jasmine\helper\Log;
 use Jasmine\helper\Server;
 use Jasmine\helper\Config;
 use Jasmine\library\cache\Cache;
@@ -22,6 +23,7 @@ use Jasmine\library\http\Response;
 require_once 'library/file/File.php';
 require_once 'helper/Config.php';
 require_once 'common/functions.php';
+require_once 'helper/Log.php';
 
 class App
 {
@@ -229,9 +231,13 @@ class App
                 throw new \ErrorException("非法操作");
             }
 
-        } catch (\ErrorException $e) {
-            $this->debug && print_r("Error: " . $e->getMessage() . PHP_EOL);
-            $this->debug && print_r($e->getTraceAsString());
+        } catch (\Exception $exception) {
+            /**
+             * write in log.
+             */
+            Log::write((string)$exception,'error');
+
+            $this->debug && print_r("Error: " . (string)$exception . PHP_EOL);
         }
     }
 
@@ -314,9 +320,13 @@ class App
                 throw new \ErrorException("非法操作");
             }
 
-        } catch (\ErrorException $e) {
-            $this->debug && print_r("Error: " . $e->getMessage() . PHP_EOL);
-            $this->debug && print_r($e->getTraceAsString());
+        } catch (\ErrorException $exception) {
+            /**
+             * write in log.
+             */
+            Log::write((string)$exception,'error');
+
+            $this->debug && print_r("Error: " . (string)$exception . PHP_EOL);
         }
     }
 
@@ -495,8 +505,12 @@ class App
 
                     throw new \Exception("class not exists:" . str_replace(__DIR__,'',$class));
                 }catch (\Exception $exception){
-                    $this->debug && print_r("Error: " . $exception->getMessage() . PHP_EOL);
-                    $this->debug && print_r($exception->getTraceAsString());
+                    /**
+                     * write in log.
+                     */
+                    Log::write((string)$exception,'error');
+
+                    $this->debug && print_r("Error: " . (string)$exception . PHP_EOL);
                 }
 
             }

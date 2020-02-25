@@ -9,9 +9,13 @@
 namespace app\index\command;
 
 
+use Jasmine\App;
+
 class Test
 {
     function index(){
+
+        App::init()->getDb()->table('aq_users_ips')->select();
         echo 'test here.';
     }
 }

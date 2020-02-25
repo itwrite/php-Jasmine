@@ -42,17 +42,20 @@ return [
                 'host'=> 'localhost'
             ],
             'read'=>[
-                'dbname'=>'a2'
+                'dbname'=>'amusingquest'
             ],
             'driver'=>'mysql',
             'host'=>'localhost',
-            'dbname'=>'ant_shop',
+            'dbname'=>'amusingquest',
             'port'=>'3306',
             'username'=>'root',
             'password'=>'root',
             'table_prefix'=>'',
             'sticky'=>true,
-            'debug'=>false
+            'debug'=>false,
+            'log'=>[
+                'directory'=>\Jasmine\helper\Config::get('PATH_RUNTIME')
+            ]
         ],
 
     ],
