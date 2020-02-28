@@ -376,23 +376,23 @@ class Grammar
 
         $join = $builder->getJoin();
         $JOINS = $this->compileJoin($join);
-        $JOINS = empty($JOINS) ? "" : "{$JOINS}";
+        $JOINS = empty($JOINS) ? "" : " {$JOINS}";
 
         $where = $builder->getWhere();
         $WHERE = $this->compileWhere($where);
-        $WHERE = empty($WHERE) ? "" : "WHERE {$WHERE}";
+        $WHERE = empty($WHERE) ? "" : " WHERE {$WHERE}";
 
         $group = $builder->getGroup();
         $GROUP_BY = $this->compileGroup($group);
-        $GROUP_BY = empty($GROUP_BY) ? "" : "GROUP BY {$GROUP_BY}";
+        $GROUP_BY = empty($GROUP_BY) ? "" : " GROUP BY {$GROUP_BY}";
 
         $having = $builder->getHaving();
         $HAVING = $this->compileHaving($having);
-        $HAVING = empty($HAVING) ? "" : "HAVING {$HAVING}";
+        $HAVING = empty($HAVING) ? "" : " HAVING {$HAVING}";
 
         $builder->clear();
 
-        return "SELECT COUNT({$FIELDS}) AS __COUNT__ FROM {$TABLES} {$JOINS} {$WHERE} {$GROUP_BY} {$HAVING};";
+        return "SELECT COUNT({$FIELDS}) AS __COUNT__ FROM {$TABLES}{$JOINS}{$WHERE}{$GROUP_BY}{$HAVING};";
     }
 
     /**

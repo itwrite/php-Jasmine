@@ -1,2 +1,2 @@
 # php-Jasmine
-简单的PHP MC 框架
+简单的PHP MVC 框架

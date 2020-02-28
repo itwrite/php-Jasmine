@@ -425,7 +425,7 @@ class Database extends Builder implements DatabaseInterface
 
             $runtime = number_format($end_time - $start_time, 10);
 
-            $log_info = sprintf("SQL Query: %s %s\r\n", $statement, ($res != false ? '[true' : '[false').",Runtime:{$runtime}]");
+            $log_info = sprintf("SQL Query: %s %s", $statement, ($res != false ? '[true' : '[false').",Runtime:{$runtime}]");
 
             $this->log($log_info);
 
@@ -472,7 +472,7 @@ class Database extends Builder implements DatabaseInterface
 
             $runtime = number_format($end_time - $start_time, 10);
 
-            $log_info = sprintf("SQL Execute: %s %s\r\n", $statement, ($res != false ? '[true' : '[false').",Runtime:{$runtime}]");
+            $log_info = sprintf("SQL Execute: %s %s", $statement, ($res != false ? '[true' : '[false').",Runtime:{$runtime}]");
 
             $this->log($log_info);
 
@@ -666,41 +666,11 @@ class Database extends Builder implements DatabaseInterface
     }
 
     /**
-     * @param $content
-     * @param string $error_level
-     * itwri 2020/2/26 0:32
+     * @param $message
+     * @param array $context
+     * itwri 2020/2/26 23:22
      */
-    public function log($content,$error_level = 'info'){
-        try{
-
-            if(!is_writable($this->logConfig['directory'])){
-                throw new \ErrorException('the log directory cannot be written.');
-            }
-            $path = $this->logConfig['directory'].'/logs/'.date('Ymd');
-            if(!is_dir($path)){
-                @mkdir($path,755,true);
-            }
-
-            $log_file = $path."/".date('d').".log";
-
-            if(is_file($log_file)){
-                $file_size = filesize($log_file);
-                $file_time = filectime($log_file);
-                if($file_size > 1024 * 1024 *2){
-                    @rename($log_file,$path."/".date('d')."-".$file_time.".log");
-                }
-            }
-
-            $content = ((is_string($content)||is_numeric($content))?$content:var_export($content, true));
-
-            //end time
-            $time_arr = explode(' ', microtime(false));
-
-            @file_put_contents($log_file, '['.date('Y-m-d H:i:s').$time_arr[0]."] [{$error_level}] {$content}", FILE_APPEND);
-
-
-        }catch (\ErrorException $exception){
-            die((string)$exception);
-        }
+    public function log($message, array $context = array()){
+        \Jasmine\helper\Log::info($message,$context);
     }
 }

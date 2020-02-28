@@ -67,6 +67,14 @@ class Input
     }
 
     /**
+     * @return mixed|string
+     * itwri 2020/2/27 12:49
+     */
+    function getScript(){
+        return $this->script;
+    }
+
+    /**
      *
      * User: Peter
      * Date: 2019/3/20

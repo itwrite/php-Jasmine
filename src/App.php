@@ -147,6 +147,24 @@ class App
         }
         return self::$Cache;
     }
+
+    /**
+     * @return $this
+     * itwri 2020/2/27 12:05
+     */
+    function logPerformanceInfo(){
+        //[运行时间：2.189942s] [吞吐率：0.46req/s] [内存消耗：3,496.66kb] [文件加载：139]
+        $runtime = round(microtime(true) - $this->beginTime, 10);
+        $reqs    = $runtime > 0 ? number_format(1 / $runtime, 2) : '∞';
+        $memory_use = number_format((memory_get_usage() - $this->beginMem) / 1024, 2);
+
+        $time_str   = '[运行时间：' . number_format($runtime, 6) . 's][吞吐率：' . $reqs . 'req/s]';
+        $memory_str = '[内存消耗：' . $memory_use . 'kb]';
+        $file_load  = '[文件加载：' . count(get_included_files()) . ']';
+
+        Log::info($time_str.$memory_str.$file_load);
+        return $this;
+    }
     /**
      * @param null $callback
      * itwri 2019/7/31 0:38
@@ -166,6 +184,8 @@ class App
          */
         $this->Request = new Request(Config::get('request',[]));
         $this->Response = new Response();
+
+        Log::info(sprintf('-- start with [%s]: %s %s %s',$this->getRequest()->getScheme(),$this->getRequest()->ip(),$this->getRequest()->getMethod(),$this->getRequest()->getUri()));
 
         try {
             /**
@@ -213,6 +233,9 @@ class App
              */
             Config::load(implode(DS, [Config::get('PATH_APPS', ''), $module, 'config']));
 
+            //Log
+            $this->logPerformanceInfo();
+
             /**
              * 实例化
              */
@@ -226,6 +249,17 @@ class App
                 //调用对应的操作方法方
                 $this->getResponse()->setData(call_user_func_array(array($controller_instance, $action), array($this->getRequest())));
                 $this->getResponse()->send();
+
+                /**
+                 * 打印日志
+                 */
+                Log::info(json_encode([
+                    'uri'=>$this->getRequest()->getUri(),
+                    'host'=>$this->getRequest()->getHost(),
+                    'method'=>$this->getRequest()->getMethod(),
+                    'header'=>$this->getRequest()->header(),
+                    'params'=>$this->getRequest()->param()
+                ]));
                 die();
             } elseif (!empty($action)) {
                 throw new \ErrorException("非法操作");
@@ -235,7 +269,7 @@ class App
             /**
              * write in log.
              */
-            Log::write((string)$exception,'error');
+            Log::error((string)$exception);
 
             $this->debug && print_r("Error: " . (string)$exception . PHP_EOL);
         }
@@ -256,6 +290,11 @@ class App
         defined('PATH_CONFIG') && Config::set('PATH_CONFIG', PATH_CONFIG);
 
         !is_null(Config::get('PATH_CONFIG')) && Config::load(Config::get('PATH_CONFIG'));
+
+        /**
+         * 打印日志
+         */
+        Log::info(sprintf('-- start with [cmd]: %s',$this->Console->getInput()->getScript()));
 
         try {
             /**
@@ -302,7 +341,8 @@ class App
              */
             Config::load(implode(DS, [Config::get('PATH_APPS', ''), $module, 'config']));
 
-
+            //Log
+            $this->logPerformanceInfo();
             /**
              * 实例化
              */
@@ -324,7 +364,7 @@ class App
             /**
              * write in log.
              */
-            Log::write((string)$exception,'error');
+            Log::error((string)$exception);
 
             $this->debug && print_r("Error: " . (string)$exception . PHP_EOL);
         }
@@ -508,7 +548,7 @@ class App
                     /**
                      * write in log.
                      */
-                    Log::write((string)$exception,'error');
+                    Log::error((string)$exception,'error');
 
                     $this->debug && print_r("Error: " . (string)$exception . PHP_EOL);
                 }

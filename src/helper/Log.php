@@ -10,10 +10,32 @@ namespace Jasmine\helper;
 
 
 use Jasmine\library\file\File;
+use Jasmine\library\log\Logger;
+use Jasmine\library\log\LogLevel;
 
 class Log
 {
-    static function write($content,$error_level = 'info'){
+    static protected $Logger = null;
+
+    /**
+     * @return Logger|null
+     * itwri 2020/2/26 23:10
+     */
+    static protected function getLogger(){
+        if(self::$Logger == null){
+            self::$Logger = new Logger('debug');
+        }
+        return self::$Logger;
+    }
+
+
+    /**
+     * @param $level
+     * @param $message
+     * @param array $context
+     * itwri 2020/2/26 23:12
+     */
+    static protected function write($level,$message, array $context = array()){
         try{
             $runtime_path = Config::get('PATH_RUNTIME','');
             if(!is_dir($runtime_path)){
@@ -22,7 +44,7 @@ class Log
             if(!File::init()->isWritable($runtime_path)){
                 throw new \ErrorException('./runtime cannot be written.');
             }
-            $path = $runtime_path.'/logs/'.date('Ymd');
+            $path = $runtime_path.'/logs/'.date('Ym');
             if(!is_dir($path)){
                 @mkdir($path,755,true);
             }
@@ -37,13 +59,127 @@ class Log
                 }
             }
 
-            $content = ((is_string($content)||is_numeric($content))?$content:var_export($content, true));
-            $line = str_pad('-',50,'-')."\r\n".str_pad('-',50,'-')."\r\n";
+            $content = ((is_string($message)||is_numeric($message))?$message:var_export($message, true));
 
-            @file_put_contents($log_file, '['.date('Y-m-d H:i:s')."][{$error_level}]\r\n", FILE_APPEND);
-            @file_put_contents($log_file, $content . "\r\n".$line, FILE_APPEND);
+            self::getLogger()->setOutput($log_file)->log($level,$content,$context);
+
         }catch (\ErrorException $exception){
-            die($exception->getMessage());
+            die((string)$exception);
         }
+    }
+
+    /**
+     * System is unusable.
+     *
+     * @param string $message
+     * @param array  $context
+     *
+     * @return void
+     */
+    static public function emergency($message, array $context = array())
+    {
+        self::write(LogLevel::EMERGENCY, $message, $context);
+    }
+
+    /**
+     * Action must be taken immediately.
+     *
+     * Example: Entire website down, database unavailable, etc. This should
+     * trigger the SMS alerts and wake you up.
+     *
+     * @param string $message
+     * @param array  $context
+     *
+     * @return void
+     */
+    static public function alert($message, array $context = array())
+    {
+        self::write(LogLevel::ALERT, $message, $context);
+    }
+
+    /**
+     * Critical conditions.
+     *
+     * Example: Application component unavailable, unexpected exception.
+     *
+     * @param string $message
+     * @param array  $context
+     *
+     * @return void
+     */
+    static public function critical($message, array $context = array())
+    {
+        self::write(LogLevel::CRITICAL, $message, $context);
+    }
+
+    /**
+     * Runtime errors that do not require immediate action but should typically
+     * be logged and monitored.
+     *
+     * @param string $message
+     * @param array  $context
+     *
+     * @return void
+     */
+    static public function error($message, array $context = array())
+    {
+        self::write(LogLevel::ERROR, $message, $context);
+    }
+
+    /**
+     * Exceptional occurrences that are not errors.
+     *
+     * Example: Use of deprecated APIs, poor use of an API, undesirable things
+     * that are not necessarily wrong.
+     *
+     * @param string $message
+     * @param array  $context
+     *
+     * @return void
+     */
+    static public function warning($message, array $context = array())
+    {
+        self::write(LogLevel::WARNING, $message, $context);
+    }
+
+    /**
+     * Normal but significant events.
+     *
+     * @param string $message
+     * @param array  $context
+     *
+     * @return void
+     */
+    static public function notice($message, array $context = array())
+    {
+        self::write(LogLevel::NOTICE, $message, $context);
+    }
+
+    /**
+     * Interesting events.
+     *
+     * Example: User logs in, SQL logs.
+     *
+     * @param string $message
+     * @param array  $context
+     *
+     * @return void
+     */
+    static public function info($message, array $context = array())
+    {
+        self::write(LogLevel::INFO, $message, $context);
+    }
+
+    /**
+     * Detailed debug information.
+     *
+     * @param string $message
+     * @param array  $context
+     *
+     * @return void
+     */
+    static public function debug($message, array $context = array())
+    {
+        self::write(LogLevel::DEBUG, $message, $context);
     }
 }
