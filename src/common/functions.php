@@ -189,15 +189,15 @@ function app($class = null,...$args){
 
 /**
  * 创建 Model 实例
- * @param $table
+ * @param $name
  * @return Model|object
  * itwri 2020/2/29 23:17
  */
-function model($table = null){
-    if(is_null($table) || empty($table)){
-        return (new Model())->table($table);
+function model($name = null){
+    if(is_null($name) || empty($name)){
+        return (new Model())->table($name);
     }
-    $class = implode('\\',['app',request()->getModule(),'model',ucfirst($table)]);
+    $class = implode('\\',['app',request()->getModule(),'model',ucfirst($name)]);
     return new $class;
 }
 
