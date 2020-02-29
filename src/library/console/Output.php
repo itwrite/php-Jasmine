@@ -17,7 +17,7 @@ class Output
      * @param string $pad
      * @return string
      */
-    function str_pad($str='',$num=20,$pad =' '){
+    function pad($str='',$num=20,$pad =' '){
         if(PHP_OS != 'Linux') {
             $str = mb_convert_encoding($str,"UTF-8","GBK");
         }
@@ -37,7 +37,7 @@ class Output
      * @param bool $isLine
      * itwri 2019/8/7 18:15
      */
-    function e_tr($columns, $width = 150,$isLine=false)
+    function tr($columns, $width = 150,$isLine=false)
     {
         $count = count($columns);
         $w = ceil($width / $count);
@@ -49,11 +49,11 @@ class Output
             if (is_string($column)) {
 
                 $column = (empty($column) || $isLine) ? '' : " ".$column;
-                $data[] = $firstChar.self::str_pad($column, $w, $pad);
+                $data[] = $firstChar.self::pad($column, $w, $pad);
 
             } elseif (is_array($column)) {
 
-                $data[] = $firstChar.self::str_pad(isset($column['content']) ? $column['content']: '', isset($column['width']) ? $column['width'] : $w,$pad);
+                $data[] = $firstChar.self::pad(isset($column['content']) ? $column['content']: '', isset($column['width']) ? $column['width'] : $w,$pad);
             }
         }
         call_user_func_array('self::e', $data);
@@ -64,11 +64,11 @@ class Output
      * @param int $width
      * itwri 2019/9/2 16:50
      */
-    function e_title($title, $width = 150)
+    function title($title, $width = 150)
     {
         $len = strlen($title);
         $left = ceil($width / 2) - ceil($len / 2) - 5;
-        self::e(self::str_pad(str_pad('', $left, '-') . $title, $width, '-'));
+        self::e(self::pad(str_pad('', $left, '-') . $title, $width, '-'));
     }
 
     /**
@@ -76,17 +76,17 @@ class Output
      * @param int $width
      * itwri 2019/9/2 16:50
      */
-    function e_head($columns = [],  $width = 150){
-        self::e_tr($columns,$width,true);
-        self::e_tr($columns,$width);
-        self::e_tr($columns,$width,true);
+    function head($columns = [],  $width = 150){
+        self::tr($columns,$width,true);
+        self::tr($columns,$width);
+        self::tr($columns,$width,true);
     }
 
     /**
      * @param int $width
      * itwri 2019/9/2 16:52
      */
-    function e_line($width = 150){
-        self::e_tr([],$width,true);
+    function line($width = 150){
+        self::tr([],$width,true);
     }
 }
