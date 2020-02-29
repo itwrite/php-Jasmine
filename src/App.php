@@ -259,10 +259,10 @@ class App
                     'method'=>$this->getRequest()->getMethod(),
                     'header'=>$this->getRequest()->header(),
                     'params'=>$this->getRequest()->param()
-                ]));
+                ],JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                 die();
             } elseif (!empty($action)) {
-                throw new \ErrorException("非法操作");
+                throw new \ErrorException("非法操作:{$action}");
             }
 
         } catch (\Exception $exception) {

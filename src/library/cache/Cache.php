@@ -9,7 +9,7 @@
 namespace Jasmine\library\cache;
 
 use Jasmine\library\cache\interfaces\CacheInterface;
-use Jasmine\library\cache\interfaces\DriverInterface;
+use Jasmine\library\cache\driver\interfaces\DriverInterface;
 
 class Cache implements CacheInterface
 {
@@ -30,7 +30,7 @@ class Cache implements CacheInterface
      * @return DriverInterface
      * itwri 2019/8/28 12:04
      */
-    function getHandler()
+    protected function getHandler()
     {
         return $this->handler;
     }
@@ -40,7 +40,7 @@ class Cache implements CacheInterface
      * @return string
      * itwri 2019/8/28 12:33
      */
-    function getCacheKey($name)
+   protected function getCacheKey($name)
     {
         return md5($name);
     }

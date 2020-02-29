@@ -9,7 +9,7 @@
 namespace Jasmine\library\cache\driver;
 
 
-use Jasmine\library\cache\interfaces\DriverInterface;
+use Jasmine\library\cache\driver\interfaces\DriverInterface;
 use \Jasmine\library\file\File as FileHelper;
 
 class File implements DriverInterface
@@ -30,22 +30,25 @@ class File implements DriverInterface
      * @return string
      * itwri 2019/8/28 14:11
      */
-    function getFilePath($key)
+    protected function getFilePath($key)
     {
         return rtrim($this->rootPath, DIRECTORY_SEPARATOR) . '/' . $key;
     }
 
     /**
      * @param $key
-     * @return bool|string
+     * @return null
      * @throws \ErrorException
-     * itwri 2019/8/28 11:58
+     * itwri 2020/2/29 11:11
      */
     function get($key)
     {
         $file = $this->getFilePath($key);
         if (file_exists($file)) {
-            $content = FileHelper::init()->get($file);
+            /**
+             * 加锁读取
+             */
+            $content = FileHelper::init()->get($file,1);
             $data = unserialize($content);
             if(!isset($data['value'])){
                 return null;
@@ -75,6 +78,9 @@ class File implements DriverInterface
 
         $content = serialize(['expire_time' => $expire_time, 'value' => $value]);
 
+        /**
+         * 加锁写入
+         */
         return FileHelper::init()->put($file, $content, 1);
     }
 
