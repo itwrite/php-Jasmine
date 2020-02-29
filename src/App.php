@@ -198,7 +198,7 @@ class App
 
     /**
      * @param null $callback
-     * itwri 2019/7/31 0:38
+     * itwri 2020/2/29 22:17
      */
     function web($callback = null){
 
@@ -265,7 +265,7 @@ class App
             /**
              * 实例化
              */
-            $controller_instance = new $controller_class($this);
+            $controller_instance = app($controller_class,$this);
 
             /**
              * 检查操作的合法性，并调起对应的操作方法
@@ -302,7 +302,7 @@ class App
 
     /**
      * @param null $callback
-     * itwri 2020/2/29 15:16
+     * itwri 2020/2/29 22:18
      */
     function console($callback = null){
         /**
@@ -359,7 +359,7 @@ class App
             /**
              * 实例化
              */
-            $controller_instance = new $controller_class($this);
+            $controller_instance = app($controller_class,$this);
 
             /**
              * 检查操作的合法性，并调起对应的操作方法
@@ -373,7 +373,7 @@ class App
                 throw new \ErrorException("非法操作");
             }
 
-        } catch (\ErrorException $exception) {
+        } catch (\Exception $exception) {
             /**
              * write in log.
              */

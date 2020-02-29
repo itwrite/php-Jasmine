@@ -147,3 +147,20 @@ if (! function_exists('tap')) {
         return $value;
     }
 }
+
+/**
+ * @param null $class
+ * @param mixed ...$args
+ * @return App|null|object
+ * @throws ReflectionException
+ * itwri 2020/2/29 22:01
+ */
+function app($class = null,...$args){
+    if(!is_null($class)){
+        $arguments = func_get_args();
+        $className = array_shift($arguments);
+        $class = new \ReflectionClass($className);
+        return $class->newInstanceArgs($arguments);
+    }
+    return App::init();
+}

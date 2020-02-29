@@ -12,6 +12,7 @@ namespace Jasmine\library;
 use Jasmine\App;
 use Jasmine\helper\Config;
 use Jasmine\library\http\Response;
+use Jasmine\library\validate\Validator;
 use Jasmine\library\view\Template;
 
 abstract class Controller
@@ -19,7 +20,7 @@ abstract class Controller
     /**
      * @var App|null
      */
-    public $app = null;
+    private $app = null;
 
     /**
      * @var http\Request|null
@@ -34,7 +35,12 @@ abstract class Controller
     /**
      * @var Template|null
      */
-    protected $Template = null;
+    private $Template = null;
+
+    /**
+     * @var null | Validator
+     */
+    private $validator = null;
 
     /**
      * Controller constructor.
@@ -91,15 +97,16 @@ abstract class Controller
     }
 
     /**
-     *
-     * User: Peter
-     * Date: 2019/3/21
-     * Time: 17:58
-     *
-     * @return App|null
+     * @param null $class
+     * @param mixed ...$args
+     * @return App|object|null
+     * itwri 2020/2/29 22:02
      */
-    protected function app()
+    protected function app($class = null,...$args)
     {
+        if(!is_null($class)){
+            return call_user_func_array('\app',func_get_args());
+        }
         return $this->app;
     }
 
@@ -138,6 +145,27 @@ abstract class Controller
     protected function getResponse()
     {
         return $this->Response;
+    }
+
+    /**
+     * @return Validator|null
+     * itwri 2020/2/29 21:44
+     */
+    protected function getValidator(){
+        if(is_null($this->validator)){
+            $this->validator = new Validator();
+        }
+        return $this->validator;
+    }
+
+    /**
+     * @param Validator $validator
+     * @return $this
+     * itwri 2020/2/29 21:45
+     */
+    protected function setValidator(Validator $validator){
+        $this->validator = $validator;
+        return $this;
     }
 
     /**
