@@ -6,7 +6,7 @@
  * Time: 11:49
  */
 
-namespace Jasmine\library\cache\interfaces;
+namespace Jasmine\library\cache\driver\interfaces;
 
 
 interface DriverInterface

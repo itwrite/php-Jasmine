@@ -10,6 +10,7 @@ namespace Jasmine;
 
 defined('DS') or define('DS', DIRECTORY_SEPARATOR);
 
+use Jasmine\helper\Autoloader;
 use Jasmine\helper\Log;
 use Jasmine\helper\Server;
 use Jasmine\helper\Config;
@@ -24,6 +25,8 @@ require_once 'library/file/File.php';
 require_once 'helper/Config.php';
 require_once 'common/functions.php';
 require_once 'helper/Log.php';
+require_once 'helper/Autoloader.php';
+
 
 class App
 {
@@ -31,6 +34,7 @@ class App
     protected $rootPath = '';
     protected $debug = false;
     protected $appPath = '';
+    protected $appNamespace = 'app';
     protected $runtimePath = '';
     protected $beginTime = 0;
     protected $beginMem = '';
@@ -51,13 +55,6 @@ class App
         $this->beginMem = memory_get_usage();
 
         /*
-        |--------------------------------------------------------------------------
-        | 注册AUTOLOAD方法
-        |--------------------------------------------------------------------------
-        */
-        $this->spl_autoload_register();
-
-        /*
        |--------------------------------------------------------------------------
        | 初始化一些常量和配置
        |--------------------------------------------------------------------------
@@ -66,7 +63,7 @@ class App
          * 取入口文件的目录为根目录
          * 保存到全局变量中
          */
-        $this->rootPath = dirname(realpath(Server::get('SCRIPT_FILENAME')));
+        $this->rootPath = dirname(realpath($_SERVER['SCRIPT_FILENAME']));
         Config::set('PATH_ROOT', $this->rootPath);
 
         /**
@@ -92,6 +89,24 @@ class App
         !is_null(Config::get('PATH_RUNTIME')) or Config::set('PATH_RUNTIME', defined('PATH_RUNTIME') ? PATH_RUNTIME : dirname($this->rootPath) . DS . 'runtime');
         $this->runtimePath = Config::get('PATH_RUNTIME');
 
+        /*
+        |--------------------------------------------------------------------------
+        | 注册AUTOLOAD
+        |--------------------------------------------------------------------------
+        */
+        Autoloader::register([
+            __NAMESPACE__.'\\'=>__DIR__, //框架类前缀
+            $this->appNamespace . '\\' =>$this->appPath, //应用类前缀
+        ]);
+
+        /**
+         * 加载公共文件
+         */
+        File::import(Config::get('PATH_COMMON', ''));
+        /**
+         * 加载公共文件
+         */
+        File::import(implode(DS, [Config::get('PATH_APPS', ''), 'common.php']));
     }
 
     /**
@@ -165,6 +180,22 @@ class App
         Log::info($time_str.$memory_str.$file_load);
         return $this;
     }
+
+    function importAppCommonFile($module){
+
+        /**
+         * 加载模块公共文件
+         */
+        File::import(implode(DS, [Config::get('PATH_APPS', ''), $module, 'common.php']));
+
+        /**
+         * 加载模块下的配置
+         */
+        Config::load(implode(DS, [Config::get('PATH_APPS', ''), $module, 'config']));
+
+        return $this;
+    }
+
     /**
      * @param null $callback
      * itwri 2019/7/31 0:38
@@ -172,15 +203,24 @@ class App
     function web($callback = null){
 
 
-        //如果返回的是false，强制退出
+        /**
+         * 回调是留给应用层提前初始化
+         * 如果返回的是false，强制退出
+         */
         if (is_callable($callback) && call_user_func_array($callback, array($this)) === false) exit("exit anyway!!");
 
+        /**
+         * 如果有定义常量PATH_CONFIG,则设到配置项中
+         */
         defined('PATH_CONFIG') && Config::set('PATH_CONFIG', PATH_CONFIG);
 
+        /**
+         * 如果存在PATH_CONFIG，则加载目录下的文件
+         */
         !is_null(Config::get('PATH_CONFIG')) && Config::load(Config::get('PATH_CONFIG'));
 
         /**
-         *
+         * 初始化请求类和响应类
          */
         $this->Request = new Request(Config::get('request',[]));
         $this->Response = new Response();
@@ -215,23 +255,9 @@ class App
             $controller_class = $this->parseAppClass($module, 'controller', $controller);
 
             /**
-             * 加载公共文件
+             * 导入应用层公共文件
              */
-            File::import(Config::get('PATH_COMMON', ''));
-            /**
-             * 加载公共文件
-             */
-            File::import(implode(DS, [Config::get('PATH_APPS', ''), 'common.php']));
-
-            /**
-             * 加载模块公共文件
-             */
-            File::import(implode(DS, [Config::get('PATH_APPS', ''), $module, 'common.php']));
-
-            /**
-             * 加载模块下的配置
-             */
-            Config::load(implode(DS, [Config::get('PATH_APPS', ''), $module, 'config']));
+            $this->importAppCommonFile($module);
 
             //Log
             $this->logPerformanceInfo();
@@ -249,7 +275,6 @@ class App
                 //调用对应的操作方法方
                 $this->getResponse()->setData(call_user_func_array(array($controller_instance, $action), array($this->getRequest())));
                 $this->getResponse()->send();
-
                 /**
                  * 打印日志
                  */
@@ -262,7 +287,7 @@ class App
                 ],JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                 die();
             } elseif (!empty($action)) {
-                throw new \ErrorException("非法操作:{$action}");
+                throw new \ErrorException("非法操作");
             }
 
         } catch (\Exception $exception) {
@@ -277,6 +302,7 @@ class App
 
     /**
      * @param null $callback
+     * itwri 2020/2/29 15:16
      */
     function console($callback = null){
         /**
@@ -323,26 +349,13 @@ class App
             $controller_class = $this->parseAppClass($module, 'command', $controller);
 
             /**
-             * 加载公共文件
+             * 导入应用层公共文件
              */
-            File::import(Config::get('PATH_COMMON', ''));
-            /**
-             * 加载公共方法
-             */
-            File::import(implode(DS, [Config::get('PATH_APPS', ''), 'common.php']));
-
-            /**
-             * 加载模块方法
-             */
-            File::import(implode(DS, [Config::get('PATH_APPS', ''), $module, 'common.php']));
-
-            /**
-             * 加载模块下的配置
-             */
-            Config::load(implode(DS, [Config::get('PATH_APPS', ''), $module, 'config']));
+            $this->importAppCommonFile($module);
 
             //Log
             $this->logPerformanceInfo();
+
             /**
              * 实例化
              */
@@ -449,20 +462,18 @@ class App
             return self::$db;
         }
 
-        /**
-         *
-         */
-
         return self::$db;
     }
 
     /**
-     * @var null
+     * @var null|App
      */
     static protected $_instance = null;
 
     /**
+     * 初始化App实例
      * @return App|null
+     * itwri 2020/2/29 15:12
      */
     static public function init(){
         if(self::$_instance == null){
@@ -470,94 +481,6 @@ class App
         }
         return self::$_instance;
     }
-
-    /**
-     * @var array
-     */
-    static protected $_classes = [];
-
-    static protected $app_namespace = 'app';
-
-
-    static private  $_auto_loaded_class_files = [];
-    /**
-     * @return $this
-     */
-    protected function spl_autoload_register(){
-        /*
-        |--------------------------------------------------------------------------
-        | 注册AUTOLOAD方法
-        |--------------------------------------------------------------------------
-        */
-        spl_autoload_register(function ($class){
-            //如果第一个字符为\，则先去掉它
-            $class = $class{0} == '\\' ? substr($class, 1) : $class;
-
-            //if it is already there, load it directly.
-            if (isset(self::$_auto_loaded_class_files[$class])) {
-                File::import(self::$_auto_loaded_class_files[$class]);
-                return true;
-            } else {
-
-                try{
-                    //
-//                $first_of_namespace = strstr($class, '\\', true);
-
-                    /**
-                     * 目前自动加载的类文件只支持.php文件
-                     * 注：往后可扩展
-                     */
-                    $filename = str_replace('\\', DS, $class) . '.php';
-
-                    /**
-                     * 提供三种自加载途径
-                     * 1、框架类
-                     * 2、模块类
-                     * 3、扩展类
-                     */
-                    $framework_namespace = explode('\\', __NAMESPACE__)[0];
-
-                    $arr = [
-                        $framework_namespace=>__DIR__,
-                        self::$app_namespace=>Config::get('PATH_APPS','./'),
-                        'org'=>Config::get('PATH_ORG','./Org')
-                    ];
-
-                    foreach ($arr as $namespace => $path) {
-                        $_filename = substr($filename, strlen($namespace)+1);
-
-                        //架框类目录
-                        $file = $path . DS . $_filename;
-
-                        if (is_file($file) && file_exists($file)) {
-                            // Win环境严格区分大小写
-                            if (strpos(PHP_OS, 'WIN') !== false && pathinfo($file, PATHINFO_FILENAME) != pathinfo(realpath($file), PATHINFO_FILENAME)) {
-                                return false;
-                            }
-
-                            File::import($file);
-
-                            //缓存加载过的文件路径
-                            self::$_auto_loaded_class_files[$class] = $file;
-                            return true;
-                        }
-                    }
-
-                    throw new \Exception("class not exists:" . str_replace(__DIR__,'',$class));
-                }catch (\Exception $exception){
-                    /**
-                     * write in log.
-                     */
-                    Log::error((string)$exception,'error');
-
-                    $this->debug && print_r("Error: " . (string)$exception . PHP_EOL);
-                }
-
-            }
-        });
-        return $this;
-    }
-
 
     /**
      * 解析应用类的类名
@@ -581,7 +504,7 @@ class App
 
         $path = $array ? implode('\\', $array) . '\\' : '';
 
-        return self::$app_namespace . '\\' . ($module ? $module . '\\' : '') . $layer . '\\' . $path . $class;
+        return $this->appNamespace . '\\' . ($module ? $module . '\\' : '') . $layer . '\\' . $path . $class;
     }
 
     /**
