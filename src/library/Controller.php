@@ -38,9 +38,14 @@ abstract class Controller
     private $Template = null;
 
     /**
-     * @var null | Validator
+     * @var mixed | Validator
      */
     private $validator = null;
+
+    /**
+     * @var mixed | Model
+     */
+    private $model = null;
 
     /**
      * Controller constructor.
@@ -108,6 +113,24 @@ abstract class Controller
             return call_user_func_array('\app',func_get_args());
         }
         return $this->app;
+    }
+
+    /**
+     * @return Model|mixed
+     * itwri 2020/2/29 23:41
+     */
+    protected function getModel(){
+        return $this->model;
+    }
+
+    /**
+     * @param Model $model
+     * @return $this
+     * itwri 2020/2/29 23:41
+     */
+    protected function setModel(Model $model){
+        $this->model = $model;
+        return $this;
     }
 
     /**

@@ -10,7 +10,12 @@ use Jasmine\App;
 use Jasmine\helper\Config;
 use Jasmine\helper\Server;
 use Jasmine\library\http\Url;
+use Jasmine\library\http\Request;
+use Jasmine\library\http\Response;
 use Jasmine\library\support\HigherOrderTapProxy;
+use Jasmine\library\validate\Validator;
+use Jasmine\library\Model;
+use Jasmine\library\page\Paginator;
 
 if (! function_exists('assets')) {
     /**
@@ -149,6 +154,23 @@ if (! function_exists('tap')) {
 }
 
 /**
+ * @return Request
+ * itwri 2020/2/29 23:21
+ */
+function request(){
+    return App::init()->getRequest();
+}
+
+/**
+ * @return Response
+ * itwri 2020/2/29 23:29
+ */
+function response(){
+    return App::init()->getResponse();
+}
+
+/**
+ * 创建实例 或 返回App实例
  * @param null $class
  * @param mixed ...$args
  * @return App|null|object
@@ -163,4 +185,52 @@ function app($class = null,...$args){
         return $class->newInstanceArgs($arguments);
     }
     return App::init();
+}
+
+/**
+ * 创建 Model 实例
+ * @param $table
+ * @return Model|object
+ * itwri 2020/2/29 23:17
+ */
+function model($table = null){
+    if(is_null($table) || empty($table)){
+        return (new Model())->table($table);
+    }
+    $class = implode('\\',['app',request()->getModule(),'model',ucfirst($table)]);
+    return new $class;
+}
+
+if(!function_exists('validator')){
+    /**
+     * @param $name
+     * @return Validator|object
+     * itwri 2020/2/29 23:57
+     */
+    function validator($name){
+        if(is_null($name) || empty($table)){
+            return new Validator();
+        }
+        $class = implode('\\',['app',request()->getModule(),'validate',ucfirst($name)]);
+        return new $class;
+    }
+}
+
+
+//分页
+if(!function_exists('paginator')){
+    /**
+     * @param $total
+     * @param int $page
+     * @param string $url
+     * @param int $perPageSize
+     * @param array $config
+     * @return Paginator
+     * itwri 2020/3/1 0:13
+     */
+    function paginator($total, $page = 1, $url = '', $perPageSize = 15, $config = []){
+        $args = func_get_args();
+        array_unshift($args,Paginator::class);
+        return call_user_func_array('\app',$args);
+    }
 }
