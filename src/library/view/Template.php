@@ -46,7 +46,7 @@ class Template implements TemplateInterface
      * @param array $data
      * @return $this
      */
-    public function make($view, $data = [])
+    public function make($view, array $data = [])
     {
         $this->name = $view;
         $this->assign($data);

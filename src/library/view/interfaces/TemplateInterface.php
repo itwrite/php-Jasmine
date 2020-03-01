@@ -9,9 +9,16 @@
 namespace Jasmine\library\view\interfaces;
 
 
+/**
+ * 模板解析：
+ * Interface TemplateInterface
+ * @package Jasmine\library\view\interfaces
+ */
 interface TemplateInterface
 {
-    public function make($view);
+    public function make($view,array $data);
+
+    public function compile($value);
 
     public function render();
 }
