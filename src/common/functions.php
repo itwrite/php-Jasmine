@@ -16,6 +16,7 @@ use Jasmine\library\support\HigherOrderTapProxy;
 use Jasmine\library\validate\Validator;
 use Jasmine\library\Model;
 use Jasmine\library\page\Paginator;
+use Jasmine\library\contracts\support\Htmlable;
 
 if (! function_exists('assets')) {
     /**
@@ -232,5 +233,23 @@ if(!function_exists('paginator')){
         $args = func_get_args();
         array_unshift($args,Paginator::class);
         return call_user_func_array('\app',$args);
+    }
+}
+
+if (! function_exists('e')) {
+    /**
+     * Escape HTML special characters in a string.
+     *
+     * @param  Htmlable|string  $value
+     * @param  bool  $doubleEncode
+     * @return string
+     */
+    function e($value, $doubleEncode = true)
+    {
+        if ($value instanceof Htmlable) {
+            return $value->toHtml();
+        }
+
+        return htmlspecialchars($value, ENT_QUOTES, 'UTF-8', $doubleEncode);
     }
 }
