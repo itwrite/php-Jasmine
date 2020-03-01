@@ -13,7 +13,7 @@ use Jasmine\App;
 use Jasmine\helper\Config;
 use Jasmine\library\view\Template;
 
-class View
+abstract class View
 {
 
     /**

@@ -51,7 +51,7 @@ use Jasmine\util\Str;
  * @method \PDOStatement|false exec($statement)
  * Class Model
  */
-class Model
+abstract class Model
 {
     private $_db = null;
 
