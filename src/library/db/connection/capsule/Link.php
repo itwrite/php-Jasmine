@@ -37,16 +37,8 @@ class Link
     {
         $this->setConfig($config);
 
-        $driver = ucfirst($this->config['driver']);
-        if (is_file(dirname(__DIR__) . DS . 'grammar' . DS . $driver . ".php")) {
-            /**
-             * if file exists, it means the class exists.
-             */
-            $class = "\\Jasmine\\library\\db\\grammar\\{$driver}";
-            $this->Grammar = new $class();
-        } else {
-            $this->Grammar = new Grammar();
-        }
+        $grammar_class= isset($this->config['grammar'])?$this->config['grammar']:Grammar::class;
+        $this->Grammar = new $grammar_class();
     }
 
     /**
