@@ -8,26 +8,29 @@
 
 namespace Jasmine\library\cache;
 
+use Jasmine\library\cache\driver\FileStore;
+use Jasmine\library\cache\driver\interfaces\StoreInterface;
 use Jasmine\library\cache\interfaces\CacheInterface;
-use Jasmine\library\cache\driver\interfaces\DriverInterface;
 
 class Cache implements CacheInterface
 {
     protected $data = [];
+
+    protected $tag = '';
+
     /**
-     * @var  DriverInterface
+     * @var null | StoreInterface
      */
     protected $handler = null;
 
-    function __construct($type, $options = [])
+    function __construct($options = [])
     {
-        $type = ucfirst($type);
-        $class = __NAMESPACE__."\\driver\\{$type}";
-        $this->handler = new $class($options);
+        $driver = isset($options['driver']) ? $options['driver'] : FileStore::class;
+        $this->handler = new $driver($options);
     }
 
     /**
-     * @return DriverInterface
+     * @return StoreInterface
      * itwri 2019/8/28 12:04
      */
     protected function getHandler()
@@ -40,9 +43,9 @@ class Cache implements CacheInterface
      * @return string
      * itwri 2019/8/28 12:33
      */
-   protected function getCacheKey($name)
+   protected function parseNameToKey($name)
     {
-        return md5($name);
+        return $name;
     }
 
     /**
@@ -52,7 +55,7 @@ class Cache implements CacheInterface
      */
     function get($name)
     {
-        $key = $this->getCacheKey($name);
+        $key = $this->parseNameToKey($name);
 
         return isset($this->data[$key]) ? $this->data[$key] : $this->getHandler()->get($key);
     }
@@ -78,34 +81,34 @@ class Cache implements CacheInterface
      */
     function set($name, $value, $expire = 0)
     {
-        $key = $this->getCacheKey($name);
+        $key = $this->parseNameToKey($name);
 
         $this->data[$key] = $value;
 
-        return $this->getHandler()->set($key, $value, $expire);
+        return $this->getHandler()->put($key, $value, $expire / 60);
     }
 
     /**
      * @param $name
      * @param $key
      * @param null $value
-     * @param int $set_expire
+     * @param int $expire
      * @return mixed
      * itwri 2019/8/28 14:00
      */
-    function mSet($name, $key, $value = null, $set_expire = 0)
+    function mSet($name, $key, $value = null, $expire = 0)
     {
         $data = $this->get($name);
         $data = is_array($data) ? $data : [];
         if (is_array($key)) {
-            $set_expire = (int)$value;
+            $expire = (int)$value;
             foreach ($key as $k => $v) {
                 $data[$k] = $v;
             }
         } else {
             $data[$key] = $value;
         }
-        return $this->set($name, $data, $set_expire);
+        return $this->set($name, $data, $expire);
     }
 
     /**
@@ -122,14 +125,15 @@ class Cache implements CacheInterface
 
     /**
      * @param $name
-     * itwri 2020/2/17 15:18
+     * @return bool|mixed
+     * itwri 2020/3/6 22:24
      */
     function delete($name){
         //
-        $key = $this->getCacheKey($name);
+        $key = $this->parseNameToKey($name);
 
         //
-        $res = $this->getHandler()->rm($key);
+        $res = $this->getHandler()->forget($key);
         if($res && isset($this->data[$key])){
             unset($this->data[$key]);
         }
