@@ -214,6 +214,13 @@ class Template implements TemplateInterface
         return "<?php echo (new {$class}('{$this->viewDirectory}','{$this->cacheDirectory}',true))->make({$expression})->render();?>";
     }
 
+
+    protected function compilePhp($expression)
+    {
+        $expression = $this->Compiler->stripParentheses($expression);
+
+        return "<?php {$expression};?>";
+    }
     /**
      * @param $expression
      * @return string
