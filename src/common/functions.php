@@ -7,6 +7,7 @@
  */
 
 use Jasmine\App;
+use Jasmine\util\Str;
 use Jasmine\helper\Config;
 use Jasmine\helper\Server;
 use Jasmine\library\http\Url;
@@ -35,6 +36,9 @@ if (! function_exists('assets')) {
     }
 }
 
+/**
+ * URL
+ */
 if (! function_exists('url')) {
     /**
      * @param $route
@@ -122,6 +126,9 @@ if (! function_exists('url')) {
     }
 }
 
+/**
+ * 语言
+ */
 if (! function_exists('lang')) {
     /**
      * @param $key
@@ -134,6 +141,9 @@ if (! function_exists('lang')) {
     }
 }
 
+/**
+ * Tab event
+ */
 if (! function_exists('tap')) {
     /**
      * Call the given Closure with the given value then return the value.
@@ -189,19 +199,8 @@ function app($class = null,...$args){
 }
 
 /**
- * 创建 Model 实例
- * @param $name
- * @return Model|object
- * itwri 2020/2/29 23:17
+ * 验证器
  */
-function model($name = null){
-    if(is_null($name) || empty($name)){
-        return (new Model())->table($name);
-    }
-    $class = implode('\\',['app',request()->getModule(),'model',ucfirst($name)]);
-    return new $class;
-}
-
 if(!function_exists('validator')){
     /**
      * @param $name
@@ -251,5 +250,49 @@ if (! function_exists('e')) {
         }
 
         return htmlspecialchars($value, ENT_QUOTES, 'UTF-8', $doubleEncode);
+    }
+}
+
+if(! function_exists('db')){
+
+    /**
+     * @param null $flag
+     * @return \Jasmine\library\db\Database|null
+     * itwri 2020/3/8 15:12
+     */
+    function db($flag = null){
+        return App::init()->getDb($flag);
+    }
+}
+
+/**
+ * 创建 Model 实例
+ */
+if(!function_exists('model')){
+    /**
+     * @param null $name
+     * @return Model
+     * itwri 2020/3/8 15:18
+     */
+    function model($name = null){
+        if(is_null($name) || empty($name)){
+            return (new Model())->table($name);
+        }
+        $class = implode('\\',['app',request()->getModule(),'model',ucfirst(Str::camel($name))]);
+        return new $class;
+    }
+}
+
+/**
+ * create a Model for table
+ */
+if(function_exists('table')){
+    /**
+     * @param $name
+     * @return Model
+     * itwri 2020/3/8 15:18
+     */
+    function table($name){
+        return \model($name);
     }
 }

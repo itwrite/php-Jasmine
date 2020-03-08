@@ -12,7 +12,6 @@ defined('DS') or define('DS', DIRECTORY_SEPARATOR);
 
 use Jasmine\helper\Autoloader;
 use Jasmine\helper\Log;
-use Jasmine\helper\Server;
 use Jasmine\helper\Config;
 use Jasmine\library\cache\Cache;
 use Jasmine\library\console\Console;
@@ -21,10 +20,8 @@ use Jasmine\library\file\File;
 use Jasmine\library\http\Request;
 use Jasmine\library\http\Response;
 
-require_once 'library/file/File.php';
 require_once 'helper/Config.php';
 require_once 'common/functions.php';
-require_once 'helper/Log.php';
 require_once 'helper/Autoloader.php';
 
 
@@ -41,6 +38,7 @@ class App
     protected $Request = null;
     protected $Response = null;
     protected $Console = null;
+    protected $Logger = null;
 
     function __construct()
     {
@@ -66,13 +64,6 @@ class App
         $this->rootPath = dirname(realpath($_SERVER['SCRIPT_FILENAME']));
         Config::set('PATH_ROOT', $this->rootPath);
 
-        /**
-         * 此部分可通过提前声明全局常量来控制
-         */
-        //调试模式,默认true
-        !is_null(Config::get('app.debug')) or Config::set('app.debug', defined('DEBUG') ? DEBUG : true);
-        $this->debug = Config::get('app.debug',false);
-
 
         !is_null(Config::get('PATH_COMMON')) or Config::set('PATH_COMMON', defined('PATH_COMMON') ? PATH_COMMON : dirname($this->rootPath) . DS . 'common');
 
@@ -95,9 +86,11 @@ class App
         |--------------------------------------------------------------------------
         */
         Autoloader::register([
-            __NAMESPACE__.'\\'=>__DIR__, //框架类前缀
-            $this->appNamespace . '\\' =>$this->appPath, //应用类前缀
+            __NAMESPACE__ . '\\' => __DIR__, //框架类前缀
+            $this->appNamespace . '\\' => $this->appPath, //应用类前缀
         ]);
+
+        $this->Logger = Log::getInstance();
 
         /**
          * 加载公共文件
@@ -112,14 +105,16 @@ class App
     /**
      * @return Request
      */
-    function getRequest(){
+    function getRequest()
+    {
         return $this->Request;
     }
 
     /**
      * @return Response
      */
-    function getResponse(){
+    function getResponse()
+    {
         return $this->Response;
     }
 
@@ -127,7 +122,8 @@ class App
      * @return string
      * itwri 2019/12/20 16:18
      */
-    function getRootPath(){
+    function getRootPath()
+    {
         return $this->rootPath;
     }
 
@@ -135,7 +131,8 @@ class App
      * @return mixed|string
      * itwri 2019/12/20 16:18
      */
-    function getAppPath(){
+    function getAppPath()
+    {
         return $this->appPath;
     }
 
@@ -143,7 +140,8 @@ class App
      * @return mixed|string
      * itwri 2019/12/20 16:18
      */
-    function getRuntimePath(){
+    function getRuntimePath()
+    {
         return $this->runtimePath;
     }
 
@@ -156,32 +154,50 @@ class App
      * @return Cache|null
      * itwri 2020/2/12 17:05
      */
-    function getCache(){
-        if(self::$Cache == null){
-            self::$Cache = new Cache(Config::get('cache.type',''),['root_path'=>Config::get('cache.path')]);
+    function getCache()
+    {
+        if (self::$Cache == null) {
+            self::$Cache = new Cache(Config::get('cache', []));
         }
         return self::$Cache;
     }
 
     /**
-     * @return $this
-     * itwri 2020/2/27 12:05
+     * @return Log|null
+     * itwri 2020/3/8 14:47
      */
-    function logPerformanceInfo(){
+    function &getLogger()
+    {
+        return $this->Logger;
+    }
+
+    /**
+     * @param string $prefix
+     * @return $this
+     * itwri 2020/3/4 18:44
+     */
+    function logPerformanceInfo($prefix = '')
+    {
         //[运行时间：2.189942s] [吞吐率：0.46req/s] [内存消耗：3,496.66kb] [文件加载：139]
         $runtime = round(microtime(true) - $this->beginTime, 10);
-        $reqs    = $runtime > 0 ? number_format(1 / $runtime, 2) : '∞';
+        $reqs = $runtime > 0 ? number_format(1 / $runtime, 2) : '∞';
         $memory_use = number_format((memory_get_usage() - $this->beginMem) / 1024, 2);
 
-        $time_str   = '[运行时间：' . number_format($runtime, 6) . 's][吞吐率：' . $reqs . 'req/s]';
+        $time_str = '[运行时间：' . number_format($runtime, 6) . 's][吞吐率：' . $reqs . 'req/s]';
         $memory_str = '[内存消耗：' . $memory_use . 'kb]';
-        $file_load  = '[文件加载：' . count(get_included_files()) . ']';
+        $file_load = '[文件加载：' . count(get_included_files()) . ']';
 
-        Log::info($time_str.$memory_str.$file_load);
+        $this->getLogger()->info($prefix . $time_str . $memory_str . $file_load);
         return $this;
     }
 
-    function importAppCommonFile($module){
+    /**
+     * @param $module
+     * @return $this
+     * itwri 2020/3/8 14:47
+     */
+    function importAppCommonFile($module)
+    {
 
         /**
          * 加载模块公共文件
@@ -200,7 +216,8 @@ class App
      * @param null $callback
      * itwri 2020/2/29 22:17
      */
-    function web($callback = null){
+    function web($callback = null)
+    {
 
 
         /**
@@ -220,12 +237,30 @@ class App
         !is_null(Config::get('PATH_CONFIG')) && Config::load(Config::get('PATH_CONFIG'));
 
         /**
+         * 此部分可通过提前声明全局常量来控制
+         */
+        //调试模式,默认true
+        !is_null(Config::get('app.debug')) or Config::set('app.debug', defined('DEBUG') ? DEBUG : false);
+        $this->debug = Config::get('app.debug', false);
+
+
+        /**
          * 初始化请求类和响应类
          */
-        $this->Request = new Request(Config::get('request',[]));
+        $this->Request = new Request(Config::get('request', []));
         $this->Response = new Response();
 
-        Log::info(sprintf('-- start with [%s]: %s %s %s',$this->getRequest()->getScheme(),$this->getRequest()->ip(),$this->getRequest()->getMethod(),$this->getRequest()->getUri()));
+        $this->getLogger()->info(str_pad('-', 50, '-'));
+        $this->logPerformanceInfo('[开始]');
+        $this->getLogger()->info(sprintf('[%s] %s, %s, %s', $this->getRequest()->getScheme(), $this->getRequest()->ip(), $this->getRequest()->getMethod(), $this->getRequest()->getUri()));
+        $this->getLogger()->info('request-header:');
+        $this->getLogger()->info([
+            'uri' => $this->getRequest()->getUri(),
+            'host' => $this->getRequest()->getHost(),
+            'method' => $this->getRequest()->getMethod(),
+            'header' => $this->getRequest()->header(),
+            'params' => $this->getRequest()->param()
+        ]);
 
         try {
             /**
@@ -259,13 +294,11 @@ class App
              */
             $this->importAppCommonFile($module);
 
-            //Log
-            $this->logPerformanceInfo();
 
             /**
              * 实例化
              */
-            $controller_instance = app($controller_class,$this);
+            $controller_instance = app($controller_class, $this);
 
             /**
              * 检查操作的合法性，并调起对应的操作方法
@@ -275,16 +308,7 @@ class App
                 //调用对应的操作方法方
                 $this->getResponse()->setData(call_user_func_array(array($controller_instance, $action), array($this->getRequest())));
                 $this->getResponse()->send();
-                /**
-                 * 打印日志
-                 */
-                Log::info(json_encode([
-                    'uri'=>$this->getRequest()->getUri(),
-                    'host'=>$this->getRequest()->getHost(),
-                    'method'=>$this->getRequest()->getMethod(),
-                    'header'=>$this->getRequest()->header(),
-                    'params'=>$this->getRequest()->param()
-                ],JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                $this->logPerformanceInfo('[结束]');
                 die();
             } elseif (!empty($action)) {
                 throw new \ErrorException("非法操作");
@@ -294,9 +318,13 @@ class App
             /**
              * write in log.
              */
-            Log::error((string)$exception);
+            $this->getLogger()->error((string)$exception);
 
-            $this->debug && print_r("Error: " . (string)$exception . PHP_EOL);
+            if ($this->debug) {
+                print_r("Error: " . (string)$exception . PHP_EOL);
+            } else {
+                print_r("Error: " . $exception->getMessage() . PHP_EOL);
+            }
         }
     }
 
@@ -304,7 +332,8 @@ class App
      * @param null $callback
      * itwri 2020/2/29 22:18
      */
-    function console($callback = null){
+    function console($callback = null)
+    {
         /**
          * 控制台
          */
@@ -316,11 +345,19 @@ class App
         defined('PATH_CONFIG') && Config::set('PATH_CONFIG', PATH_CONFIG);
 
         !is_null(Config::get('PATH_CONFIG')) && Config::load(Config::get('PATH_CONFIG'));
+        /**
+         * 此部分可通过提前声明全局常量来控制
+         */
+        //调试模式,默认true
+        !is_null(Config::get('app.debug')) or Config::set('app.debug', defined('DEBUG') ? DEBUG : false);
+        $this->debug = Config::get('app.debug', false);
 
         /**
          * 打印日志
          */
-        Log::info(sprintf('-- start with [cmd]: %s',$this->Console->getInput()->getScript()));
+        $this->getLogger()->info(str_pad('-', 50, '-'));
+        $this->logPerformanceInfo('[开始]');
+        $this->getLogger()->info(sprintf('[cmd]: %s', $this->Console->getInput()->getScript()));
 
         try {
             /**
@@ -359,7 +396,7 @@ class App
             /**
              * 实例化
              */
-            $controller_instance = app($controller_class,$this);
+            $controller_instance = app($controller_class, $this);
 
             /**
              * 检查操作的合法性，并调起对应的操作方法
@@ -368,6 +405,7 @@ class App
 
                 //调用对应的操作方法方
                 echo call_user_func_array(array($controller_instance, $action), array($this));
+                $this->logPerformanceInfo('[结束]');
                 die();
             } elseif (!empty($action)) {
                 throw new \ErrorException("非法操作");
@@ -377,9 +415,13 @@ class App
             /**
              * write in log.
              */
-            Log::error((string)$exception);
+            $this->getLogger()->error((string)$exception);
 
-            $this->debug && print_r("Error: " . (string)$exception . PHP_EOL);
+            if ($this->debug) {
+                print_r("Error: " . (string)$exception . PHP_EOL);
+            } else {
+                print_r("Error: " . $exception->getMessage() . PHP_EOL);
+            }
         }
     }
 
@@ -389,8 +431,9 @@ class App
      * @return mixed
      * itwri 2019/12/19 17:54
      */
-    public function config($key,$default = null){
-        return Config::get($key,$default);
+    public function config($key = '', $default = null)
+    {
+        return call_user_func_array(implode('::', [Config::class, 'get']), func_get_args());
     }
 
     /**
@@ -413,21 +456,21 @@ class App
         /**
          * 获取配置信息
          */
-        $connections_config = Config::get('db.connections',[]);
+        $connections_config = Config::get('db.connections', []);
 
         /**
          * 如果传入的type 不为null
          * 返回对应数据的Database实例
          */
-        if($flag != null && is_string($flag)){
+        if ($flag != null && is_string($flag)) {
 
-            if((!isset(self::$dbs[$flag]))||(!self::$dbs[$flag] instanceof Database)){
+            if ((!isset(self::$dbs[$flag])) || (!self::$dbs[$flag] instanceof Database)) {
 
-                $config = isset($connections_config[$flag])?$connections_config[$flag]:[];
+                $config = isset($connections_config[$flag]) ? $connections_config[$flag] : [];
 
-                self::$dbs[$flag] = new Database($config);
+                self::$dbs[$flag] = new Database($config, $this->getLogger());
 
-                if(isset($config['debug']) && $config['debug']){
+                if (isset($config['debug']) && $config['debug']) {
                     self::$dbs[$flag]->debug(1);
                 }
             }
@@ -443,20 +486,20 @@ class App
             /**
              * 如果不传入type，则默认用配置的
              */
-            $db_key = $flag ? $flag : Config::get('db.default','mysql');
+            $db_key = $flag ? $flag : Config::get('db.default', 'mysql');
             /**
              * 取出db config
              */
-            $config = isset($connections_config[$db_key])?$connections_config[$db_key]:[];
+            $config = isset($connections_config[$db_key]) ? $connections_config[$db_key] : [];
 
             /**
              * 初始化Database
              */
-            self::$db = new Database($config);
+            self::$db = new Database($config, $this->getLogger());
             /**
              * 如果配置中设置debug模式，则将db设为debug = true
              */
-            if(isset($config['debug']) && $config['debug']){
+            if (isset($config['debug']) && $config['debug']) {
                 self::$db->debug(1);
             }
             return self::$db;
@@ -475,8 +518,9 @@ class App
      * @return App|null
      * itwri 2020/2/29 15:12
      */
-    static public function init(){
-        if(self::$_instance == null){
+    static public function init()
+    {
+        if (self::$_instance == null) {
             self::$_instance = new static();
         }
         return self::$_instance;
@@ -499,7 +543,7 @@ class App
         $name = str_replace(['/', '.'], '\\', $name);
         $array = explode('\\', $name);
 
-        $class = $this->parseName(array_pop($array),1) . ($appendSuffix ? ucfirst($layer) : '');
+        $class = $this->parseName(array_pop($array), 1) . ($appendSuffix ? ucfirst($layer) : '');
 
 
         $path = $array ? implode('\\', $array) . '\\' : '';

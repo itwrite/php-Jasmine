@@ -43,19 +43,24 @@ class Autoloader
      */
     public function autoload($className)
     {
-        $className = $className{0} == '\\' ? substr($className, 1) : $className;
+        try{
+            $className = $className{0} == '\\' ? substr($className, 1) : $className;
 
-        foreach (self::$prefixArr as $prefix=>$baseDirectory) {
+            foreach (self::$prefixArr as $prefix=>$baseDirectory) {
 
-            if (0 === strpos($className, $prefix)) {
-                $parts = explode('\\', substr($className, strlen($prefix)));
-                $filePath = $baseDirectory.'/'.implode('/', $parts).'.php';
+                if (0 === strpos($className, $prefix)) {
+                    $parts = explode('\\', substr($className, strlen($prefix)));
+                    $filePath = $baseDirectory.'/'.implode('/', $parts).'.php';
 
-                if (is_file($filePath)) {
-                    require $filePath;
-                    break;
+                    if (is_file($filePath)) {
+                        require $filePath;
+                        break;
+                    }
                 }
             }
+
+        }catch (\Exception $exception){
+            print_r((string)$exception);
         }
 
     }

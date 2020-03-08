@@ -10,22 +10,48 @@ namespace Jasmine\helper;
 
 
 use Jasmine\library\file\File;
+use Jasmine\library\log\interfaces\LoggerAwareInterface;
+use Jasmine\library\log\interfaces\LoggerInterface;
 use Jasmine\library\log\Logger;
 use Jasmine\library\log\LogLevel;
 
-class Log
+class Log implements LoggerInterface,LoggerAwareInterface
 {
-    static protected $Logger = null;
+    protected static $instance;
+    protected $Logger = null;
 
+    function __construct()
+    {
+       $this->setLogger(new Logger('debug'));
+    }
+
+    /**
+     * Sets a logger instance on the object.
+     *
+     * @param LoggerInterface $logger
+     *
+     * @return void
+     */
+    public function setLogger(LoggerInterface $logger){
+        $this->Logger = $logger;
+    }
+
+    /**
+     * @return Log
+     * itwri 2020/3/8 14:06
+     */
+    public static function getInstance(){
+        if(self::$instance == null){
+            self::$instance = new static();
+        }
+        return self::$instance;
+    }
     /**
      * @return Logger|null
      * itwri 2020/2/26 23:10
      */
-    static protected function getLogger(){
-        if(self::$Logger == null){
-            self::$Logger = new Logger('debug');
-        }
-        return self::$Logger;
+    protected function getLogger(){
+        return $this->Logger;
     }
 
 
@@ -35,7 +61,7 @@ class Log
      * @param array $context
      * itwri 2020/2/26 23:12
      */
-    static protected function write($level,$message, array $context = array()){
+    public function write($level,$message, array $context = array()){
         try{
             $runtime_path = Config::get('PATH_RUNTIME','');
             if(!is_dir($runtime_path)){
@@ -61,7 +87,7 @@ class Log
 
             $content = ((is_string($message)||is_numeric($message))?$message:var_export($message, true));
 
-            self::getLogger()->setOutput($log_file)->log($level,$content,$context);
+            self::getLogger()->setOutput($log_file)->write($level,$content,$context);
 
         }catch (\ErrorException $exception){
             die((string)$exception);
@@ -76,7 +102,7 @@ class Log
      *
      * @return void
      */
-    static public function emergency($message, array $context = array())
+     public function emergency($message, array $context = array())
     {
         self::write(LogLevel::EMERGENCY, $message, $context);
     }
@@ -92,7 +118,7 @@ class Log
      *
      * @return void
      */
-    static public function alert($message, array $context = array())
+     public function alert($message, array $context = array())
     {
         self::write(LogLevel::ALERT, $message, $context);
     }
@@ -107,7 +133,7 @@ class Log
      *
      * @return void
      */
-    static public function critical($message, array $context = array())
+     public function critical($message, array $context = array())
     {
         self::write(LogLevel::CRITICAL, $message, $context);
     }
@@ -121,7 +147,7 @@ class Log
      *
      * @return void
      */
-    static public function error($message, array $context = array())
+     public function error($message, array $context = array())
     {
         self::write(LogLevel::ERROR, $message, $context);
     }
@@ -137,7 +163,7 @@ class Log
      *
      * @return void
      */
-    static public function warning($message, array $context = array())
+     public function warning($message, array $context = array())
     {
         self::write(LogLevel::WARNING, $message, $context);
     }
@@ -150,7 +176,7 @@ class Log
      *
      * @return void
      */
-    static public function notice($message, array $context = array())
+     public function notice($message, array $context = array())
     {
         self::write(LogLevel::NOTICE, $message, $context);
     }
@@ -165,7 +191,7 @@ class Log
      *
      * @return void
      */
-    static public function info($message, array $context = array())
+     public function info($message, array $context = array())
     {
         self::write(LogLevel::INFO, $message, $context);
     }
@@ -178,8 +204,19 @@ class Log
      *
      * @return void
      */
-    static public function debug($message, array $context = array())
+     public function debug($message, array $context = array())
     {
         self::write(LogLevel::DEBUG, $message, $context);
+    }
+
+    /**
+     * @param $name
+     * @param $arguments
+     * @return mixed
+     * itwri 2020/3/8 14:45
+     */
+    public static function __callStatic($name, $arguments)
+    {
+        return call_user_func_array([self::getInstance(),$name],$arguments);
     }
 }

@@ -119,5 +119,5 @@ interface LoggerInterface
      *
      * @return void
      */
-    public function log($level, $message, array $context = array());
+    public function write($level, $message, array $context = array());
 }

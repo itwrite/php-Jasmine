@@ -46,10 +46,7 @@ return [
             'password'=>'',
             'table_prefix'=>'',
             'sticky'=>true,
-            'debug'=>false,
-            'log'=>[
-                'directory'=>\Jasmine\helper\Config::get('PATH_RUNTIME')."/logs"
-            ]
+            'debug'=>false
         ],
 
     ],

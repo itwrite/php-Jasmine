@@ -71,25 +71,6 @@ class Logger extends AbstractLogger
         return $this;
     }
 
-    /**
-     * @param mixed $level
-     * @param string $message
-     * @param array $context
-     * itwri 2020/2/26 22:50
-     */
-    public function log($level, $message, array $context = array())
-    {
-        if (!isset(self::$levels[$level])) {
-            throw new InvalidArgumentException(sprintf('The log level "%s" does not exist.', $level));
-        }
-
-        if (self::$levels[$level] < $this->minLevelIndex) {
-            return;
-        }
-
-        $formatter = $this->formatter;
-        fwrite($this->handle, $formatter($level, $message, $context));
-    }
 
     /**
      * @param string $level
@@ -121,5 +102,28 @@ class Logger extends AbstractLogger
         }
 
         return sprintf('%s [%s] %s', date('Y-m-d H:i:s').substr(strval($timeArr[0]),1), $level, $message).\PHP_EOL;
+    }
+
+    /**
+     * Logs with an arbitrary level.
+     *
+     * @param mixed $level
+     * @param string $message
+     * @param array $context
+     *
+     * @return void
+     */
+    public function write($level, $message, array $context = array())
+    {
+        if (!isset(self::$levels[$level])) {
+            throw new InvalidArgumentException(sprintf('The log level "%s" does not exist.', $level));
+        }
+
+        if (self::$levels[$level] < $this->minLevelIndex) {
+            return;
+        }
+
+        $formatter = $this->formatter;
+        fwrite($this->handle, $formatter($level, $message, $context));
     }
 }

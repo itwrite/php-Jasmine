@@ -14,6 +14,7 @@ use Jasmine\library\db\connection\Connection;
 use Jasmine\library\db\interfaces\DatabaseInterface;
 use Jasmine\library\db\query\capsule\Expression;
 use Jasmine\library\exception\ErrorException;
+use Jasmine\library\log\interfaces\LoggerInterface;
 
 require_once 'Builder.php';
 require_once 'connection/capsule/Link.php';
@@ -44,23 +45,15 @@ class Database extends Builder implements DatabaseInterface
      */
     protected $errorArr = [];
 
-    /**
-     * @var array
-     */
-    protected $logConfig = [
-        'directory'=> ''
-    ];
+    protected $Logger = null;
 
-    function __construct(array $config)
+
+    function __construct(array $config, LoggerInterface $logger = null)
     {
         parent::__construct();
 
-        /**
-         * 如果有日志的配置
-         */
-        if(isset($config['log']) && is_array($config['log'])){
-            $this->logConfig = array_merge( $this->logConfig, $config['log']);
-        }
+        $this->Logger = $logger;
+
         $this->tablePrefix = isset($config['table_prefix'])?$config['table_prefix']:'';
         $this->Connection = new Connection($config);
     }
@@ -671,6 +664,8 @@ class Database extends Builder implements DatabaseInterface
      * itwri 2020/2/26 23:22
      */
     public function log($message, array $context = array()){
-        \Jasmine\helper\Log::info($message,$context);
+        if($this->Logger instanceof LoggerInterface){
+            $this->Logger->info($message,$context);
+        }
     }
 }
