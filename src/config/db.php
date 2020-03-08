@@ -38,7 +38,7 @@ return [
     */
     'connections'=>[
         'mysql'=>[
-            'driver'=>'mysql',
+            'grammar'=>\Jasmine\library\db\grammar\Mysql::class,
             'host'=>'',
             'dbname'=>'',
             'port'=>'',
