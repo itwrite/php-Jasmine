@@ -171,7 +171,7 @@ abstract class Controller
     }
 
     /**
-     * @return Validator|null
+     * @return Validator|mixed
      * itwri 2020/2/29 21:44
      */
     protected function getValidator(){
