@@ -145,6 +145,7 @@ class Builder implements BuilderInterface
     /**
      * @param string $fields
      * @return $this
+     * itwri 2020/3/8 16:55
      */
     public function fields($fields = '*')
     {
