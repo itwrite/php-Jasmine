@@ -40,12 +40,12 @@ abstract class Controller
     /**
      * @var mixed | Validator
      */
-    private $validator = null;
+    protected $Validator = null;
 
     /**
      * @var mixed | Model
      */
-    private $model = null;
+    protected $Model = null;
 
     /**
      * Controller constructor.
@@ -57,6 +57,8 @@ abstract class Controller
         $this->Request = $this->app->getRequest();
         $this->Response = $this->app->getResponse();
         $this->Template = $this->getTemplate();
+        $this->Model = new Model();
+        $this->Validator = new Validator();
     }
 
     /**
@@ -120,7 +122,7 @@ abstract class Controller
      * itwri 2020/2/29 23:41
      */
     protected function getModel(){
-        return $this->model;
+        return $this->Model;
     }
 
     /**
@@ -129,7 +131,7 @@ abstract class Controller
      * itwri 2020/2/29 23:41
      */
     protected function setModel(Model $model){
-        $this->model = $model;
+        $this->Model = $model;
         return $this;
     }
 
@@ -175,10 +177,10 @@ abstract class Controller
      * itwri 2020/2/29 21:44
      */
     protected function getValidator(){
-        if(is_null($this->validator)){
-            $this->validator = new Validator();
+        if(is_null($this->Validator)){
+            $this->Validator = new Validator();
         }
-        return $this->validator;
+        return $this->Validator;
     }
 
     /**
@@ -187,7 +189,7 @@ abstract class Controller
      * itwri 2020/2/29 21:45
      */
     protected function setValidator(Validator $validator){
-        $this->validator = $validator;
+        $this->Validator = $validator;
         return $this;
     }
 
