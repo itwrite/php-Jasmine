@@ -9,6 +9,7 @@
 namespace Jasmine\library\db;
 
 use Jasmine\library\db\grammar\Grammar;
+use Jasmine\library\db\query\capsule\Expression;
 use Jasmine\library\db\query\From;
 use Jasmine\library\db\query\Group;
 use Jasmine\library\db\query\Having;
@@ -130,6 +131,15 @@ class Builder implements BuilderInterface
     function &getSet()
     {
         return $this->Set;
+    }
+
+    /**
+     * @param $value
+     * @return Expression
+     * itwri 2020/3/10 21:02
+     */
+    public function raw($value){
+        return new Expression($value);
     }
 
     /**

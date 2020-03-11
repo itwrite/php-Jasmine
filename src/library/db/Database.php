@@ -584,15 +584,6 @@ class Database extends Builder implements DatabaseInterface
     }
 
     /**
-     * @param string $value
-     * @return Expression
-     * itwri 2020/3/9 10:27
-     */
-    public static function raw(string $value){
-        return new Expression($value);
-    }
-
-    /**
      * @param $callback
      * @return $this
      */

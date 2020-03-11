@@ -203,6 +203,15 @@ class Model
     }
 
     /**
+     * @param $value
+     * @return db\query\capsule\Expression
+     * itwri 2020/3/10 21:08
+     */
+    public static function raw($value){
+        return (new static())->getDb()->raw($value);
+    }
+
+    /**
      *
      * User: Peter
      * Date: 2019/3/19
