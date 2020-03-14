@@ -97,10 +97,6 @@ class Template implements TemplateInterface
         $templateFilename = $this->getTemplateFilename();
         $compiledFilename = $this->getCompiledFilename();
 
-        if(!is_file($templateFilename)){
-            die("file[{$templateFilename}] is not exists.");
-        }
-
         $cacheDir = dirname($compiledFilename);
 
         if (!is_null($this->cacheDirectory)) {

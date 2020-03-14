@@ -41,7 +41,11 @@ trait ManagePath
      */
     protected function getTemplateFilename()
     {
-        return $this->viewDirectory . DIRECTORY_SEPARATOR . str_replace(['.', '/', '\\'], DIRECTORY_SEPARATOR, $this->name) . $this->ext;
+        $templateFilename = $this->viewDirectory . DIRECTORY_SEPARATOR . str_replace(['.', '/', '\\'], DIRECTORY_SEPARATOR, $this->name) . $this->ext;
+        if(!is_file($templateFilename)){
+            die("file[{$templateFilename}] is not exists.");
+        }
+        return $templateFilename;
     }
 
     /**
