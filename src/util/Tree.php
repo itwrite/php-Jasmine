@@ -68,17 +68,30 @@ class Tree
      * @return array
      * itwri 2019/12/17 18:14
      */
-    public static function getPaths($item, $data)
+    public static function findPaths($item, $data)
     {
         $result = [$item];
         $parent = self::findItem($item['parent_id'], $data);
         if ($parent) {
-            $list = self::getPaths($parent, $data);
+            $list = self::findPaths($parent, $data);
             foreach ($list as $value) {
                 $result[] = $value;
             }
         }
         return $result;
+    }
+
+    /**
+     * @param $data
+     * @param $parent_id
+     * @param string $parent_key
+     * @return bool
+     * itwri 2020/3/16 0:43
+     */
+    public static function hasChildren($data, $parent_id, $parent_key = 'parent_id')
+    {
+        $result = self::findChildren($data, $parent_id, $parent_key);
+        return count($result['children']) > 0;
     }
 
     /**
@@ -107,12 +120,12 @@ class Tree
      * @param array $_paths
      * itwri 2020/3/10 11:37
      */
-    public static function  adverse($list, &$result = [], $parent_id = 0, $_paths = [])
+    public static function adverse($list, &$result = [], $parent_id = 0, $_paths = [])
     {
         /**
          * 找到子项
          */
-        $res = Arr::findChildren($list, $parent_id);
+        $res = self::findChildren($list, $parent_id);
         if (!empty($res['children'])) {
             //如果存在子项
             foreach ($res['children'] as $child) {
@@ -124,7 +137,7 @@ class Tree
                 /**
                  * 继续查找下一级
                  */
-                $res1 = Arr::findChildren($res['remain'], $child['id']);
+                $res1 = self::findChildren($res['remain'], $child['id']);
                 if (empty($res1['children'])) {
                     $child['paths'] = $paths;
                     $result[] = $child;

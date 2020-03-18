@@ -142,13 +142,13 @@ class Arr
     /**
      * Get a subset of the items from the given array.
      *
-     * @param  array  $array
-     * @param  array|string  $keys
+     * @param  array $array
+     * @param  array|string $keys
      * @return array
      */
     static public function only($array, $keys)
     {
-        return array_intersect_key($array, array_flip((array) $keys));
+        return array_intersect_key($array, array_flip((array)$keys));
     }
 
     /**
@@ -277,7 +277,7 @@ class Arr
     {
         if (is_array($array)) {
             $keys = array_keys($array);
-            return self::identicalValues($keys,array_keys($keys));
+            return self::identicalValues($keys, array_keys($keys));
         }
         return false;
     }
@@ -289,66 +289,93 @@ class Arr
      * @return bool
      * itwri 2019/12/3 15:30
      */
-    static public function identicalValues( $arrayA , $arrayB ) {
+    static public function identicalValues($arrayA, $arrayB)
+    {
 
-        sort( $arrayA );
-        sort( $arrayB );
+        sort($arrayA);
+        sort($arrayB);
 
         return $arrayA == $arrayB;
     }
 
     /**
-     * 将列表转成树形
-     * @param array $list
-     * @param int $parent_id
-     * @param string $parent_key
+     * Filter items by the given key value pair.
+     * @param $array
+     * @param $key
+     * @param $operator
+     * @param null $value
      * @return array
-     * itwri 2020/1/7 11:27
+     * itwri 2020/3/15 16:02
      */
-    static public function toTree(array $list, $parent_id = 0, $parent_key = 'parent_id')
+    public static function where($array, $key, $operator, $value = null)
     {
-        $result = [];
-        if (self::isAssoc($list)) {
-            // 找出子项 和 剩下项
-            $res1 = self::findChildren($list, $parent_id, $parent_key);
-
-            if (!empty($res1['children'])) {
-                foreach ($res1['children'] as $child) {
-
-                    $children = self::toTree($res1['remain'], $child['id'], $parent_key);
-                    if (!empty($children)) {
-                        $child['children'] = $children;
-                    }
-
-                    $result[] = $child;
-                }
-            }
-
-        }
-        return $result;
+        return self::filter($array, self::operatorForWhere(...func_get_args()));
     }
 
     /**
-     * 找出子项 和 剩下项
-     * @param $data
-     * @param $parent_id
-     * @param string $parent_key
+     * @param $array
+     * @param callable $callback
      * @return array
-     * itwri 2020/1/7 11:27
+     * itwri 2020/3/15 15:27
      */
-    static public function findChildren($data, $parent_id, $parent_key = 'parent_id')
+    public static function filter($array, callable $callback)
     {
-        $result = ['children' => [], 'remain' => []];
-        if (self::isAssoc($data)) {
-            foreach ($data as $datum) {
-                if (isset($datum[$parent_key]) && $datum[$parent_key] == $parent_id) {
-                    $result['children'][] = $datum;
-                } else {
-                    $result['remain'][] = $datum;
-                }
-            }
+        return array_filter($array, $callback, ARRAY_FILTER_USE_BOTH);
+    }
+
+    /**
+     * Get an operator checker callback.
+     *
+     * @param  string $key
+     * @param  string $operator
+     * @param  mixed $value
+     * @return \Closure
+     */
+    protected static function operatorForWhere($key, $operator, $value = null)
+    {
+        if (func_num_args() === 2) {
+            $value = $operator;
+
+            $operator = '=';
         }
-        return $result;
+
+        return function ($item) use ($key, $operator, $value) {
+            $retrieved = Arr::get($item, $key);
+
+            $strings = array_filter([$retrieved, $value], function ($value) {
+                return is_string($value) || (is_object($value) && method_exists($value, '__toString'));
+            });
+
+            if (count($strings) < 2 && count(array_filter([$retrieved, $value], 'is_object')) == 1) {
+                return in_array($operator, ['!=', '<>', '!==']);
+            }
+
+            switch ($operator) {
+                default:
+                case '=':
+                case '==':
+                    return $retrieved == $value;
+                case '!=':
+                case '<>':
+                    return $retrieved != $value;
+                case '<':
+                    return $retrieved < $value;
+                case '>':
+                    return $retrieved > $value;
+                case '<=':
+                    return $retrieved <= $value;
+                case '>=':
+                    return $retrieved >= $value;
+                case '===':
+                    return $retrieved === $value;
+                case '!==':
+                    return $retrieved !== $value;
+                case 'like':
+                    $regexp = str_replace('%','(.*)',$value);
+                    return preg_match("/^{$regexp}$/",$retrieved);
+
+            }
+        };
     }
 
     /**

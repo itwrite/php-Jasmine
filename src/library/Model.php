@@ -67,12 +67,21 @@ class Model
          */
         $this->_db = App::init()->getDb();
 
+        /**
+         * 解析模型类名为对应的表名
+         */
         $arr = explode('\\', get_class($this));
         $class_name = array_pop($arr);
         unset($arr);
 
+        /**
+         * 读取配置里的表前缀
+         */
         $this->table_prefix = empty($this->table_prefix) ? Config::get('db.table_prefix', '') : $this->table_prefix;
 
+        /**
+         * 如果没有单独设置表名，则默认模型类名为对应的表名
+         */
         $this->table_name = empty($this->table_name) ? $class_name : $this->table_name;
 
     }
@@ -101,9 +110,15 @@ class Model
      */
     function table($table)
     {
+        /**
+         * 解析表名
+         */
         $table = preg_replace('/\s+/', ' ', trim($table));
         $arr = explode(' ', $table);
         $this->table_name = $arr[0];
+        /**
+         * 别名
+         */
         $this->table_alias = isset($arr[1]) ? $arr[1] : $this->table_alias;
         unset($arr);
         return $this;
