@@ -33,7 +33,7 @@ class Autoloader
     public static function register(array $prefixArr,$prepend = false)
     {
         self::extend($prefixArr);
-        spl_autoload_register([new static(),'autoload'], true, $prepend);
+        spl_autoload_register(implode('::',[__CLASS__,'autoload']), true, $prepend);
     }
 
     /**
@@ -41,7 +41,7 @@ class Autoloader
      *
      * @param string $className Fully qualified name of a class.
      */
-    public function autoload($className)
+    public static function autoload($className)
     {
         try{
             $className = $className{0} == '\\' ? substr($className, 1) : $className;
