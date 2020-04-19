@@ -19,6 +19,13 @@ use Jasmine\library\Model;
 use Jasmine\library\page\Paginator;
 use Jasmine\library\contracts\support\Htmlable;
 
+/*
+ |----------------------------------
+ | 资源目录
+ |----------------------------------
+ |
+ | 网站
+ */
 if (!function_exists('assets')) {
     /**
      * @param $path
@@ -270,7 +277,7 @@ if (!function_exists('validator')) {
         if (is_null($name) || empty($table)) {
             return new Validator();
         }
-        $class = implode('\\', ['app', request()->getModule(), 'validate', ucfirst($name)]);
+        $class = implode('\\', ['app', request()->getModule(), 'validate', $name]);
         return new $class;
     }
 }
@@ -332,15 +339,16 @@ if (!function_exists('db')) {
 if (!function_exists('model')) {
     /**
      * @param null $name
+     * @param null $layer
      * @return Model
-     * itwri 2020/3/8 15:18
+     * itwri 2020/4/12 21:47
      */
-    function model($name = null)
+    function model($name = null,$layer = null)
     {
         if (is_null($name) || empty($name)) {
             return (new Model())->table($name);
         }
-        $class = implode('\\', ['app', request()->getModule(), 'model', ucfirst(Str::camel($name))]);
+        $class = implode('\\', ['app', is_string($layer)?$layer:Str::studly(request()->getModule()), 'model', ucfirst(Str::camel($name))]);
         return new $class;
     }
 }
