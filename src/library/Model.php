@@ -240,7 +240,7 @@ class Model
     function __call($name, $arguments)
     {
         if (!method_exists($this, $name) && method_exists($this->getDb(), $name)) {
-            if (in_array($name, explode(',', 'insert,delete,update,select,paginator,count,getLastSql,query,exec,setInc,setDec'))) {
+            if (in_array($name, explode(',', 'insert,insertAll,delete,update,select,paginator,count,getLastSql,query,exec,setInc,setDec'))) {
                 $this->getDb()->getFrom()->clear()->table($this->getTableFullName());
                 return call_user_func_array([$this->getDb(), $name], $arguments);
             } elseif (in_array($name, explode(',', 'debug,distinct,fields,join,leftJoin,rightJoin,innerJoin,where,whereIn,whereNotIn,whereBetween,whereLike,orderBy,groupBy,limit,having,set,clear'))) {

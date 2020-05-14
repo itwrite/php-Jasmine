@@ -37,7 +37,7 @@ class View
          * view
          */
         !is_dir($viewDirectory) && $viewDirectory = implode(DIRECTORY_SEPARATOR, [
-            App::init()->getAppPath(),
+            App::init()->appPath(),
             isset($module) ? $module : App::init()->getRequest()->getModule(),
             'view',
         ]);
@@ -51,7 +51,7 @@ class View
              */
             $cacheDirectory = Config::get('view.cache.directory');
             !is_dir($cacheDirectory) && $cacheDirectory = implode(DIRECTORY_SEPARATOR, [
-                App::init()->getRuntimePath(),
+                App::init()->runtimePath(),
                 'views',
                 App::init()->getRequest()->getModule(),
             ]);

@@ -14,6 +14,7 @@ use Jasmine\helper\Config;
 use Jasmine\library\http\Response;
 use Jasmine\library\validate\Validator;
 use Jasmine\library\view\Template;
+use Jasmine\util\Str;
 
 abstract class Controller
 {
@@ -205,7 +206,7 @@ abstract class Controller
              * view directory
              */
             !is_dir($viewDirectory) && $viewDirectory = implode(DIRECTORY_SEPARATOR, [
-                App::init()->getAppPath(),
+                App::init()->appPath(),
                 isset($module) ? $module : App::init()->getRequest()->getModule(),
                 'view',
             ]);
@@ -213,9 +214,8 @@ abstract class Controller
             /**
              * cache directory
              */
-            $cacheDirectory = Config::get('view.cache.directory');
-            !is_dir($cacheDirectory) && $cacheDirectory = implode(DIRECTORY_SEPARATOR, [
-                App::init()->getRuntimePath(),
+            $cacheDirectory = implode(DIRECTORY_SEPARATOR, [
+                App::init()->runtimePath(),
                 'views',
                 App::init()->getRequest()->getModule(),
             ]);
@@ -248,7 +248,7 @@ abstract class Controller
 
         try {
 
-            $name = empty($name) ? implode('.', [$this->getRequest()->getModule(),$this->getRequest()->getController(),$this->getRequest()->getAction()]) : $name;
+            $name = empty($name) ? implode('.', [Str::snake($this->getRequest()->getModule()),Str::snake($this->getRequest()->getController()),Str::snake($this->getRequest()->getAction())]) : $name;
             /**
              * 判断模块
              */
@@ -259,7 +259,7 @@ abstract class Controller
                  * view
                  */
                 $viewDirectory = implode(DIRECTORY_SEPARATOR, [
-                    App::init()->getAppPath(),
+                    App::init()->appPath(),
                     isset($module) ? $module : App::init()->getRequest()->getModule(),
                     'view',
                 ]);
