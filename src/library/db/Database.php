@@ -158,7 +158,7 @@ class Database extends Builder implements DatabaseInterface
                 if(!isset($tempData[$tempKey])){
                     $tempData[$tempKey] = [];
                 }
-                $tempData[$tempKey] = $datum;
+                $tempData[$tempKey][] = $datum;
             }
         }
 
@@ -167,12 +167,7 @@ class Database extends Builder implements DatabaseInterface
             $tempData[$k][] = $insertData;
         }
 
-        /**
-         * 开启事务
-         */
-        $this->startTrans();
-        try{
-
+        return $this->transaction(function () use($tempData,$size,$is_replace){
             $Link = $this->getLink(true);
 
             foreach ($tempData as $tempDatum) {
@@ -196,6 +191,10 @@ class Database extends Builder implements DatabaseInterface
                         //已执行则重置
                         $newData = [];
 
+                        /**
+                         * 这里要把from回滚，保证后面的执行一致
+                         */
+                        $this->getFrom()->roll();
                     }
                 }
 
@@ -213,24 +212,8 @@ class Database extends Builder implements DatabaseInterface
                     throw new \Exception('Error with the data.');
                 }
             }
-
-            $this->commit();
-
             return true;
-        }catch (\Exception $exception){
-
-            $this->errorArr[] = (string)$exception;
-
-            /**
-             * 回滚事务
-             */
-            $this->rollback();
-
-            if($this->debug == true){
-                die((string)$exception);
-            }
-            return false;
-        }
+        });
     }
 
     /**
@@ -465,7 +448,7 @@ class Database extends Builder implements DatabaseInterface
 
             $runtime = number_format($end_time - $start_time, 10);
 
-            $log_info = sprintf("SQL Execute: %s %s", $statement, ($res != false ? '[true' : '[false').",Runtime:{$runtime}]");
+            $log_info = sprintf("SQL Execute: %s %s", $statement, ($res != false ? '[true' : '[false').",Runtime:{$runtime}]".var_export($res,true));
 
             $this->log($log_info);
 
@@ -576,10 +559,20 @@ class Database extends Builder implements DatabaseInterface
             $this->_sticky = false;
             $this->rollback();
 
+            /**
+             * 记录日志
+             */
             $this->log((string)$exception);
 
+            /**
+             * 暂存错误信息
+             */
             $this->errorArr[] = $exception->getMessage();
-            return false;
+
+            /**
+             * 继续向外抛
+             */
+            throw new \Exception($exception->getMessage());
         }
     }
 
