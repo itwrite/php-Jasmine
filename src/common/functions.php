@@ -274,10 +274,10 @@ if (!function_exists('validator')) {
      */
     function validator($name)
     {
-        if (is_null($name) || empty($table)) {
+        if (is_null($name)) {
             return new Validator();
         }
-        $class = implode('\\', ['app', request()->getModule(), 'validate', $name]);
+        $class = implode('\\', ['app', App::init()->getModule(), 'validate', $name]);
         return new $class;
     }
 }
