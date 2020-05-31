@@ -79,7 +79,7 @@ class Logger extends AbstractLogger
      * @return string
      * itwri 2020/2/26 22:50
      */
-    private function format(string $level, string $message, array $context): string
+    private function format($level, string $message, array $context)
     {
         //time
         $timeArr = explode(' ', microtime(false));
