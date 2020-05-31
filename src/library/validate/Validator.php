@@ -9,32 +9,84 @@
 namespace Jasmine\library\validate;
 
 
-class Validator
-{
-    protected $messages = [];
-    protected $rules = [];
-    protected $scenes = [];
+use Jasmine\library\validate\interfaces\ValidatorInterface;
 
+class Validator implements ValidatorInterface
+{
+    //存放提示信息
+    protected $messages = [];
+
+    /**
+     * 规则
+     * @var array
+     */
+    protected $rules = [
+        self::SCENE_CREATE => [],
+        self::SCENE_UPDATE => [],
+        self::SCENE_DELETE => [],
+        self::SCENE_LIST   => [],
+    ];
+
+    /**
+     * 暂存需要验证的数据
+     * @var array
+     */
+    private $_data = [];
+
+    /**
+     * 错误信息暂存区
+     * @var array
+     */
     private $_errorMsgArr = [];
+
+    /**
+     * 扩展规则
+     * @var array
+     */
     private $_extensions = [];
+
+    /**
+     * 扩展提示信息
+     * @var array
+     */
     private $_extensionsMsg = [];
 
-    function __construct(array $rules = [], array $messages = [])
+    function __construct()
     {
-        $this->rules = array_merge($this->rules, $rules);
-        $this->messages = array_merge($this->messages, $messages);
+        //
     }
 
     /**
-     * @param array $rules
-     * @param array $messages
-     * @return Validator
-     * itwri 2019/8/18 12:53
+     * @param array $data
+     * @return $this
+     * itwri 2020/5/11 10:26
      */
-    static function make(array $rules = [], array $messages = [])
+    public function with(array $data)
     {
-        $static = new static($rules, $messages);
-        return $static;
+        $this->_data = $data;
+        return $this;
+    }
+
+    /**
+     * @param string $scene
+     * @param array $rules
+     * @return $this
+     * itwri 2020/5/11 10:30
+     */
+    public function setRules(string $scene, array $rules)
+    {
+        $this->rules[$scene] = $rules;
+        return $this;
+    }
+
+    /**
+     * @param string $scene
+     * @return mixed
+     * itwri 2020/5/11 10:30
+     */
+    public function getRules(string $scene)
+    {
+        return isset($this->rules[$scene]) ? $this->rules[$scene] : null;
     }
 
     /**
@@ -75,21 +127,25 @@ class Validator
     }
 
     /**
+     * @param $scene
      * @param $field
      * @param $rule
      * @param null $ruleFun
      * @param null $msg
-     * @return $this
-     * itwri 2019/8/16 15:29
+     * @return $this|mixed
+     * itwri 2020/5/11 12:40
      */
-    function addRule($field, $rule, $ruleFun = null, $msg = null)
+    function addRule($scene, $field, $rule, $ruleFun = null, $msg = null)
     {
+        if (!isset($this->rules[$scene])) {
+            $this->rules[$scene] = [];
+        }
 
         /**
          * 检查是否已有规则
          */
-        if (!isset($this->rules[$field])) {
-            $this->rules[$field] = '';
+        if (!isset($this->rules[$scene][$field])) {
+            $this->rules[$scene][$field] = '';
         }
 
         /**
@@ -102,7 +158,7 @@ class Validator
         /**
          * 分析已有规则
          */
-        $arr = explode('|', $this->rules[$field]);
+        $arr = explode('|', $this->rules[$scene][$field]);
 
         /**
          * 解析新规则
@@ -125,7 +181,7 @@ class Validator
          */
         $arr[] = $rule;
 
-        $this->rules[$field] = implode('|', $arr);
+        $this->rules[$scene][$field] = implode('|', $arr);
 
         return $this;
     }
@@ -140,33 +196,35 @@ class Validator
     }
 
     /**
-     * @param $scene
-     * @param array $data
+     * @param mixed $scene
      * @return bool
      * itwri 2019/8/10 0:24
      */
-    function check($scene, Array $data = [])
+    function check($scene)
     {
-        if(func_num_args()==0){
-            $data = array_merge($_GET, $_POST);
-            $needCheckFields = array_keys($this->rules);
-        }else if(func_num_args() == 1){
-            $data = $scene;
-            $needCheckFields = array_keys($this->rules);
-        }else{
-            if (is_array($scene)) {
-                $needCheckFields = array_values($scene);
-            } else if (is_string($scene) && strpos($scene, ',') !== false) {
-                $needCheckFields = explode(',', $scene);
-            } else {
-                /**
-                 * 加载场景，分析场景字段
-                 */
-                $needCheckFields = isset($this->scenes[$scene]) ? $this->scenes[$scene] : [];
-            }
+        /**
+         * 规则场景为空（即没有规则）时，可认为不需要校验，直接返回
+         */
+        if (!isset($scene) || empty($scene)) {
+            return true;
         }
 
-        return $this->checkFields($needCheckFields, $data);
+        /**
+         * 当传入的是一个数组
+         * 则可认为传入的是规则的数据,即临时规则
+         */
+        if (is_array($scene)) {
+            $rules = $scene;
+        } else {
+            $rules = $this->getRules($scene);
+        }
+
+        /**
+         * 取出规则中所有需要校验的字段
+         */
+        $baseFields = array_keys($rules);
+
+        return $this->checkFields($rules, $baseFields, $this->_data);
     }
 
     /**
@@ -179,18 +237,30 @@ class Validator
      */
     protected function getValue($target, $key, $default = null)
     {
+        /**
+         * 参数小于2或者key为null
+         * 返回原数据
+         */
         if (func_num_args() < 2 || is_null($key)) return $target;
 
-        if (is_string($key)) {
+        /**
+         * 字符键、数据键
+         */
+        if (is_string($key) || is_numeric($key)) {
 
+            /**
+             * 如果存在，则直接返回
+             */
             if (is_array($target) && isset($target[$key])) return $target[$key];
 
-            foreach (explode('.', $key) as $segment) {
+            /**
+             * 按字符‘.’切割分析
+             */
+            foreach (explode('.', strval($key)) as $segment) {
                 if (is_array($target)) {
                     if (!array_key_exists($segment, $target)) {
                         return self::value($default);
                     }
-
                     $target = $target[$segment];
                 } elseif (is_object($target)) {
                     if (!isset($target->{$segment})) {
@@ -208,12 +278,13 @@ class Validator
 
 
     /**
-     * @param $needCheckFields
-     * @param array $data
+     * @param array $allRules
+     * @param array $needCheckFields
+     * @param array|null $data
      * @return bool
-     * itwri 2019/8/10 0:21
+     * itwri 2020/5/11 20:43
      */
-    protected function checkFields(array $needCheckFields, Array $data = null)
+    protected function checkFields($allRules, array $needCheckFields, Array $data = null)
     {
         /**
          * 没有需要检查的字段
@@ -227,10 +298,12 @@ class Validator
             if (empty($field)) continue;
 
             $field = trim($field);
+            print_r($field."\r\n");
             /**
              * 分析字段，如果有规则存在，则根据规则进行校验
              */
-            $rules = trim(isset($this->rules[$field]) ? $this->rules[$field] : '');
+            $rules = trim(isset($allRules[$field]) ? $allRules[$field] : '');
+
             if (!empty($rules)) {
                 /**
                  * 可以多规则，以英文字符 '|' 间隔
@@ -259,7 +332,7 @@ class Validator
                      * 数据值
                      */
                     $value = $this->getValue($data, $field);
-
+                    print_r($value."\r\n");
 
                     //处理需要的传参
                     $params = array_merge([$value], $args);
@@ -344,7 +417,7 @@ class Validator
     function ruleRequire($value)
     {
         $value = is_string($value) ? trim($value) : $value;
-        if($value === 0 || $value == '0'){
+        if ($value === 0 || $value == '0') {
             return true;
         }
         if (!is_null($value)) {
@@ -365,7 +438,7 @@ class Validator
     {
         $len = function_exists('mb_strlen') ? mb_strlen($value) : strlen($value);
         if (func_num_args() < 3) {
-            return $len == $min;
+            return $len >= $min;
         }
         $bok = false;
         $min != '' && $bok = $len >= $min;
@@ -599,10 +672,11 @@ class Validator
      * @return false|int
      * itwri 2019/9/15 21:19
      */
-    function ruleRegExp($value,$rule){
+    function ruleRegExp($value, $rule)
+    {
         $args = func_get_args();
         $value = array_shift($args);
-        $pattern = implode('',$args);
-        return preg_match($pattern,$value);
+        $pattern = implode('', $args);
+        return preg_match($pattern, $value);
     }
 }
