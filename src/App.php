@@ -20,28 +20,44 @@ use Jasmine\library\file\File;
 use Jasmine\library\http\Request;
 use Jasmine\library\http\Response;
 
-require_once 'helper/Config.php';
-require_once 'common/functions.php';
 require_once 'helper/Autoloader.php';
+/**
+ * ------------------------------------
+ * 框架类前缀
+ * ------------------------------------
+ *
+ * 先注册框架的目录
+ */
+Autoloader::register([__NAMESPACE__ . '\\' => __DIR__]);
 
 
 class App
 {
-    protected $config = null;
-    protected $rootPath = '';
-    protected $debug = false;
-    protected $appPath = '';
-    protected $appNamespace = 'app';
-    protected $runtimePath = '';
+    const VERSION = '1.0.0';
+
+    /**
+     * The current globally available container (if any).
+     *
+     * @var App
+     */
+    protected static $instance;
+
+    protected $basePath = '';
+
+    protected $namespace = 'app';
     protected $beginTime = 0;
     protected $beginMem = '';
+
     protected $Request = null;
     protected $Response = null;
+    /** @var Console */
     protected $Console = null;
     protected $Logger = null;
 
-    function __construct()
+    function __construct($basePath = null)
     {
+        $this->setBasePath($basePath);
+
         /**
          * 记录开始时间
          */
@@ -52,60 +68,179 @@ class App
          */
         $this->beginMem = memory_get_usage();
 
-        /*
-       |--------------------------------------------------------------------------
-       | 初始化一些常量和配置
-       |--------------------------------------------------------------------------
-       */
         /**
-         * 取入口文件的目录为根目录
-         * 保存到全局变量中
+         * 日志实例
          */
-        $this->rootPath = dirname(realpath($_SERVER['SCRIPT_FILENAME']));
-        Config::set('PATH_ROOT', $this->rootPath);
-
-
-        !is_null(Config::get('PATH_COMMON')) or Config::set('PATH_COMMON', defined('PATH_COMMON') ? PATH_COMMON : dirname($this->rootPath) . DS . 'common');
-
-        /**
-         * 应用目录，可通过提前声明的常量进行设置，也可以通过config去设置
-         * 默认为入口文件目录下的Application目录
-         */
-        !is_null(Config::get('PATH_APPS')) or Config::set('PATH_APPS', defined('PATH_APPS') ? PATH_APPS : dirname($this->rootPath) . DS . 'app');
-        $this->appPath = Config::get('PATH_APPS');
-
-        /**
-         * 缓存以及编译文件的根目录
-         */
-        !is_null(Config::get('PATH_RUNTIME')) or Config::set('PATH_RUNTIME', defined('PATH_RUNTIME') ? PATH_RUNTIME : dirname($this->rootPath) . DS . 'runtime');
-        $this->runtimePath = Config::get('PATH_RUNTIME');
-
-        /*
-        |--------------------------------------------------------------------------
-        | 注册AUTOLOAD
-        |--------------------------------------------------------------------------
-        */
-        Autoloader::register([
-            __NAMESPACE__ . '\\' => __DIR__, //框架类前缀
-            $this->appNamespace . '\\' => $this->appPath, //应用类前缀
-        ]);
-
         $this->Logger = Log::getInstance();
 
+        Config::set('PATH_FRAMEWORK',__DIR__);
+
+        foreach ([
+            'PATH_APPS'=>$this->appPath(),
+            'PATH_ROOT'=>$this->basePath(),
+            'PATH_CONFIG'=>$this->configPath(),
+            'PATH_RUNTIME'=>$this->runtimePath()] as $key=>$value) {
+
+            Config::set($key,$value);
+        }
+    }
+
+
+    /**
+     * @param $basePath
+     * @param null $callback
+     * itwri 2020/3/31 23:21
+     */
+    public static function start($basePath,$callback = null)
+    {
+        $app = self::init($basePath);
+        /**
+         * 回调是留给应用层提前初始化
+         * 如果返回的是false，强制退出
+         */
+        if (is_callable($callback) && call_user_func_array($callback, array($app)) === false) exit("exit anyway!!");
+
+        /*
+        |--------------------------------------------------------------------------
+        | 扩展 AUTOLOAD 加载的目录
+        |--------------------------------------------------------------------------
+        */
+        Autoloader::extend([$app->namespace.'\\' => $app->appPath()]); //应用类前缀
+
+        /**
+         * 如果有定义常量PATH_CONFIG,则设到配置项中
+         */
+        defined('PATH_CONFIG') && Config::set('PATH_CONFIG', PATH_CONFIG);
+
+        /**
+         * 如果存在PATH_CONFIG，则加载目录下的文件
+         */
+        Config::load($app->configPath());
+
+        /**
+         * 此部分可通过提前声明全局常量来控制
+         */
+        //调试模式,默认true
+        !is_null(Config::get('app.debug')) or Config::set('app.debug', defined('DEBUG') ? DEBUG : false);
+
+
         /**
          * 加载公共文件
          */
-        File::import(Config::get('PATH_COMMON', ''));
+        File::import(Config::get('PATH_FRAMEWORK').'/common');
         /**
          * 加载公共文件
          */
-        File::import(implode(DS, [Config::get('PATH_APPS', ''), 'common.php']));
+        File::import(implode(DIRECTORY_SEPARATOR, [Config::get('PATH_APPS', ''), 'common.php']));
+
+        /**
+         *
+         */
+        if($app->isRunningInConsole()){
+            $app->consoleKernel();
+            die();
+        }
+
+        $app->httpKernel();
+    }
+
+
+
+    /**
+     * Determine if the application is running in the console.
+     *
+     * @return bool
+     */
+    public function isRunningInConsole()
+    {
+        return php_sapi_name() === 'cli' || php_sapi_name() === 'phpdbg';
+    }
+
+    /**
+     * Get the version number of the application.
+     *
+     * @return string
+     */
+    public function version()
+    {
+        return static::VERSION;
+    }
+
+    /**
+     * @param $basePath
+     * itwri 2020/3/31 15:09
+     */
+    public function setBasePath($basePath)
+    {
+        $this->basePath = rtrim($basePath, '\/');
+    }
+
+    /**
+     * Get the base path of the App installation.
+     *
+     * @param  string $path Optionally, a path to append to the base path
+     * @return string
+     */
+    public function basePath($path = '')
+    {
+        return $this->basePath . ($path ? DIRECTORY_SEPARATOR . $path : $path);
+    }
+
+    /**
+     * Get the app path of the App installation.
+     * @return string
+     * itwri 2020/3/31 17:04
+     */
+    public function appPath()
+    {
+        return Config::get('PATH_APPS', $this->basePath . DIRECTORY_SEPARATOR . 'app');
+    }
+
+    /**
+     * Get the path to the application "app" directory.
+     *
+     * @param  string $path Optionally, a path to append to the app path
+     * @return string
+     */
+    public function path($path = '')
+    {
+        return $this->appPath() . ($path ? DIRECTORY_SEPARATOR . $path : $path);
+    }
+
+    /**
+     * Get the path to the public / web directory.
+     *
+     * @return string
+     */
+    public function publicPath()
+    {
+        return Config::get('PATH_PUBLIC',$this->basePath . DIRECTORY_SEPARATOR . 'public');
+    }
+
+    /**
+     * Get the path to the config / web directory.
+     *
+     * @return string
+     */
+    public function configPath()
+    {
+        return Config::get('PATH_CONFIG',$this->basePath . DIRECTORY_SEPARATOR . 'config');
+    }
+
+    /**
+     * Get the path to the public / web directory.
+     *
+     * @return string
+     */
+    public function runtimePath()
+    {
+        return Config::get('PATH_RUNTIME', $this->basePath . DIRECTORY_SEPARATOR . 'runtime');
     }
 
     /**
      * @return Request
      */
-    function getRequest()
+    public function getRequest()
     {
         return $this->Request;
     }
@@ -113,42 +248,15 @@ class App
     /**
      * @return Response
      */
-    function getResponse()
+    public function getResponse()
     {
         return $this->Response;
     }
 
     /**
-     * @return string
-     * itwri 2019/12/20 16:18
-     */
-    function getRootPath()
-    {
-        return $this->rootPath;
-    }
-
-    /**
-     * @return mixed|string
-     * itwri 2019/12/20 16:18
-     */
-    function getAppPath()
-    {
-        return $this->appPath;
-    }
-
-    /**
-     * @return mixed|string
-     * itwri 2019/12/20 16:18
-     */
-    function getRuntimePath()
-    {
-        return $this->runtimePath;
-    }
-
-    /**
      * @var Cache|null
      */
-    static protected $Cache = null;
+    protected static $Cache = null;
 
     /**
      * @return Cache|null
@@ -172,78 +280,10 @@ class App
     }
 
     /**
-     * @param string $prefix
-     * @return $this
-     * itwri 2020/3/4 18:44
+     * itwri 2020/3/31 23:38
      */
-    function logPerformanceInfo($prefix = '')
+    protected function httpKernel()
     {
-        //[运行时间：2.189942s] [吞吐率：0.46req/s] [内存消耗：3,496.66kb] [文件加载：139]
-        $runtime = round(microtime(true) - $this->beginTime, 10);
-        $reqs = $runtime > 0 ? number_format(1 / $runtime, 2) : '∞';
-        $memory_use = number_format((memory_get_usage() - $this->beginMem) / 1024, 2);
-
-        $time_str = '[运行时间：' . number_format($runtime, 6) . 's][吞吐率：' . $reqs . 'req/s]';
-        $memory_str = '[内存消耗：' . $memory_use . 'kb]';
-        $file_load = '[文件加载：' . count(get_included_files()) . ']';
-
-        $this->getLogger()->info($prefix . $time_str . $memory_str . $file_load);
-        return $this;
-    }
-
-    /**
-     * @param $module
-     * @return $this
-     * itwri 2020/3/8 14:47
-     */
-    function importAppCommonFile($module)
-    {
-
-        /**
-         * 加载模块公共文件
-         */
-        File::import(implode(DS, [Config::get('PATH_APPS', ''), $module, 'common.php']));
-
-        /**
-         * 加载模块下的配置
-         */
-        Config::load(implode(DS, [Config::get('PATH_APPS', ''), $module, 'config']));
-
-        return $this;
-    }
-
-    /**
-     * @param null $callback
-     * itwri 2020/2/29 22:17
-     */
-    function web($callback = null)
-    {
-
-
-        /**
-         * 回调是留给应用层提前初始化
-         * 如果返回的是false，强制退出
-         */
-        if (is_callable($callback) && call_user_func_array($callback, array($this)) === false) exit("exit anyway!!");
-
-        /**
-         * 如果有定义常量PATH_CONFIG,则设到配置项中
-         */
-        defined('PATH_CONFIG') && Config::set('PATH_CONFIG', PATH_CONFIG);
-
-        /**
-         * 如果存在PATH_CONFIG，则加载目录下的文件
-         */
-        !is_null(Config::get('PATH_CONFIG')) && Config::load(Config::get('PATH_CONFIG'));
-
-        /**
-         * 此部分可通过提前声明全局常量来控制
-         */
-        //调试模式,默认true
-        !is_null(Config::get('app.debug')) or Config::set('app.debug', defined('DEBUG') ? DEBUG : false);
-        $this->debug = Config::get('app.debug', false);
-
-
         /**
          * 初始化请求类和响应类
          */
@@ -294,7 +334,6 @@ class App
              */
             $this->importAppCommonFile($module);
 
-
             /**
              * 实例化
              */
@@ -320,7 +359,7 @@ class App
              */
             $this->getLogger()->error((string)$exception);
 
-            if ($this->debug) {
+            if (Config::get('app.debug')) {
                 print_r("Error: " . (string)$exception . PHP_EOL);
             } else {
                 print_r("Error: " . $exception->getMessage() . PHP_EOL);
@@ -329,28 +368,14 @@ class App
     }
 
     /**
-     * @param null $callback
-     * itwri 2020/2/29 22:18
+     * itwri 2020/3/31 23:10
      */
-    function console($callback = null)
+    protected function consoleKernel()
     {
         /**
          * 控制台
          */
         $this->Console = new Console();
-
-        //如果返回的是false，强制退出
-        if (is_callable($callback) && call_user_func_array($callback, array($this)) === false) exit("exit anyway!!");
-
-        defined('PATH_CONFIG') && Config::set('PATH_CONFIG', PATH_CONFIG);
-
-        !is_null(Config::get('PATH_CONFIG')) && Config::load(Config::get('PATH_CONFIG'));
-        /**
-         * 此部分可通过提前声明全局常量来控制
-         */
-        //调试模式,默认true
-        !is_null(Config::get('app.debug')) or Config::set('app.debug', defined('DEBUG') ? DEBUG : false);
-        $this->debug = Config::get('app.debug', false);
 
         /**
          * 打印日志
@@ -383,7 +408,7 @@ class App
             /**
              * 路由规则
              */
-            $controller_class = $this->parseAppClass($module, 'command', $controller);
+            $controller_class = $this->parseAppClass($module, 'commands', $controller);
 
             /**
              * 导入应用层公共文件
@@ -401,15 +426,14 @@ class App
             /**
              * 检查操作的合法性，并调起对应的操作方法
              */
-            if (!empty($action) && is_callable(array($controller_instance, $action))) {
-
-                //调用对应的操作方法方
-                echo call_user_func_array(array($controller_instance, $action), array($this));
-                $this->logPerformanceInfo('[结束]');
-                die();
-            } elseif (!empty($action)) {
+            if (empty($action) || !is_callable(array($controller_instance, $action))) {
                 throw new \ErrorException("非法操作");
             }
+
+            //调用对应的操作方法方
+            print_r(call_user_func_array(array($controller_instance, $action), array($this)));
+            $this->logPerformanceInfo('[结束]');
+            die();
 
         } catch (\Exception $exception) {
             /**
@@ -417,12 +441,45 @@ class App
              */
             $this->getLogger()->error((string)$exception);
 
-            if ($this->debug) {
+            if (Config::get('app.debug')) {
                 print_r("Error: " . (string)$exception . PHP_EOL);
             } else {
                 print_r("Error: " . $exception->getMessage() . PHP_EOL);
             }
         }
+    }
+
+    /**
+     * @return mixed|string
+     * itwri 2020/5/15 16:33
+     */
+    public function getModule(){
+        if($this->isRunningInConsole()){
+            return $this->Console->getInput()->getModule();
+        }
+        return $this->getRequest()->getModule();
+    }
+
+    /**
+     * @return mixed|string
+     * itwri 2020/5/15 16:33
+     */
+    public function getController(){
+        if($this->isRunningInConsole()){
+            return $this->Console->getInput()->getController();
+        }
+        return $this->getRequest()->getController();
+    }
+
+    /**
+     * @return mixed|string
+     * itwri 2020/5/15 16:33
+     */
+    public function getAction(){
+        if($this->isRunningInConsole()){
+            return $this->Console->getInput()->getAction();
+        }
+        return $this->getRequest()->getAction();
     }
 
     /**
@@ -508,22 +565,19 @@ class App
         return self::$db;
     }
 
-    /**
-     * @var null|App
-     */
-    static protected $_instance = null;
 
     /**
      * 初始化App实例
-     * @return App|null
-     * itwri 2020/2/29 15:12
+     * @param $basePath
+     * @return App
+     * itwri 2020/3/31 23:21
      */
-    static public function init()
+    static public function init($basePath = null)
     {
-        if (self::$_instance == null) {
-            self::$_instance = new static();
+        if (is_null(self::$instance)) {
+            self::$instance = new static($basePath);
         }
-        return self::$_instance;
+        return self::$instance;
     }
 
     /**
@@ -548,7 +602,7 @@ class App
 
         $path = $array ? implode('\\', $array) . '\\' : '';
 
-        return $this->appNamespace . '\\' . ($module ? $module . '\\' : '') . $layer . '\\' . $path . $class;
+        return $this->namespace . '\\' . ($module ? $module . '\\' : '') . $layer . '\\' . $path . $class;
     }
 
     /**
@@ -570,5 +624,42 @@ class App
         }
 
         return strtolower(trim(preg_replace("/[A-Z]/", "_\\0", $name), "_"));
+    }
+
+    /**
+     * @param string $prefix
+     * @return $this
+     * itwri 2020/3/4 18:44
+     */
+    protected function logPerformanceInfo($prefix = '')
+    {
+        //[运行时间：2.189942s] [吞吐率：0.46req/s] [内存消耗：3,496.66kb] [文件加载：139]
+        $runtime = round(microtime(true) - $this->beginTime, 10);
+        $reqs = $runtime > 0 ? number_format(1 / $runtime, 2) : '∞';
+        $memory_use = number_format((memory_get_usage() - $this->beginMem) / 1024, 2);
+
+        $time_str   = '[运行时间：' . number_format($runtime, 6) . 's][吞吐率：' . $reqs . 'req/s]';
+        $memory_str = '[内存消耗：' . $memory_use . 'kb]';
+        $file_load  = '[文件加载：' . count(get_included_files()) . ']';
+
+        $this->getLogger()->info($prefix . $time_str . $memory_str . $file_load);
+        return $this;
+    }
+
+    /**
+     * @param $module
+     * itwri 2020/3/8 14:47
+     */
+    protected function importAppCommonFile($module)
+    {
+        /**
+         * 加载模块公共文件
+         */
+        File::import(implode(DS, [Config::get('PATH_APPS', ''), $module, 'common.php']));
+
+        /**
+         * 加载模块下的配置
+         */
+        Config::load(implode(DS, [Config::get('PATH_APPS', ''), $module, 'config']));
     }
 }
