@@ -8,7 +8,8 @@
 
 namespace Jasmine\library\db\query\schema;
 
-require_once __DIR__.'/../capsule/Expression.php';
+require_once __DIR__ . '/../capsule/Expression.php';
+
 use Jasmine\library\db\query\capsule\Expression;
 
 abstract class Eloquent
@@ -64,7 +65,8 @@ abstract class Eloquent
      *
      * @return $this
      */
-    function reset(){
+    function reset()
+    {
         $this->data = [];
         return $this;
     }
@@ -73,8 +75,9 @@ abstract class Eloquent
      * @param $value
      * @return mixed
      */
-    function value($value){
-        if($value instanceof Expression)return $value->getValue();
+    function value($value)
+    {
+        if ($value instanceof Expression) return $value->getValue();
         return $value;
     }
 }
